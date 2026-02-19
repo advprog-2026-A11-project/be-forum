@@ -1,0 +1,34 @@
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-beforum}
+      POSTGRES_USER: ${POSTGRES_USER:-beforum}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - beforum-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-beforum} -d ${POSTGRES_DB:-beforum}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - DB_URL=jdbc:postgresql://db:5432/${POSTGRES_DB:-beforum}
+      - DB_USERNAME=${POSTGRES_USER:-beforum}
+      - DB_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  beforum-db-data:
