@@ -8,7 +8,7 @@ plugins {
 
 group = "id.ac.ui.cs.advprog"
 version = "0.0.1-SNAPSHOT"
-description = "auth"
+description = "forum"
 
 java {
     toolchain {
@@ -28,7 +28,7 @@ repositories {
 
 sonarqube {
         properties {
-                property("sonar.projectKey", "advprog-2026-A11-project_be-auth")
+                property("sonar.projectKey", "advprog-2026-A11-project_be-forum")
                 property("sonar.organization", "adpro-a-kelompok-11")
         }
 }
