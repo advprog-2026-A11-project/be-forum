@@ -18,6 +18,6 @@ jobs:
 
       - name: Dummy deploy (no-op)
         run: |
-          echo "Validate workflow succeeded for this commit and branch 'beta'."
-          echo "Running dummy deploy – no production changes will be made."
+          echo "Validate workflow succeeded"
+          echo "Running dummy deploy"
           echo "Deploy simulation complete."
