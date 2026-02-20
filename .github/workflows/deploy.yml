@@ -1,0 +1,23 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ['Lint', 'Scorecard supply-chain security', 'CI - Build Test Coverage Sonar']
+    types: [completed]
+    branches:
+      - 'main'
+
+jobs:
+  deploy:
+    name: Deploy (runs only if Validate succeeded)
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Dummy deploy (no-op)
+        run: |
+          echo "Validate workflow succeeded for this commit and branch 'beta'."
+          echo "Running dummy deploy – no production changes will be made."
+          echo "Deploy simulation complete."
