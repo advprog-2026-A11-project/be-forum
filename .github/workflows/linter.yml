@@ -2,8 +2,12 @@ name: Lint
 
 on: # yamllint disable-line rule:truthy
   pull_request: null
+  push:
+    branches:
+      - "main"
+      - "staging"
 
-permissions: { }
+permissions: {}
 
 jobs:
   build:
@@ -20,7 +24,7 @@ jobs:
       pull-requests: write
       # To report GitHub Actions status checks. Omit if you don't need
       # to update commit status
-      statuses: write
+      # statuses write removed to restrict GITHUB_TOKEN privileges
 
     steps:
       - name: Checkout code
@@ -39,4 +43,4 @@ jobs:
           VALIDATE_ALL_CODEBASE: false
           VALIDATE_JAVA: true
           LINTER_RULES_PATH: .github/checks
-          JAVA_FILE_NAME: 'google-check.xml'
+          JAVA_FILE_NAME: "google-check.xml"
