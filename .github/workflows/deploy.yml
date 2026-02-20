@@ -1,0 +1,108 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows:
+      - Lint
+      - Scorecard supply-chain security
+      - CI - Build Test Coverage Sonar
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Check prerequisite workflows
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' }}
+    permissions:
+      actions: read
+      contents: read
+
+    steps:
+      - name: Wait for required workflows and evaluate results
+        uses: actions/github-script@v7
+        id: check
+
+        with:
+          script: |
+            const required = [
+              "Lint",
+              "Scorecard supply-chain security",
+              "CI - Build Test Coverage Sonar"
+            ];
+
+            const sha = context.payload.workflow_run.head_sha;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const timeoutMs = 30 * 60 * 1000;
+            const pollMs = 20 * 1000;
+            const maxAttempts = Math.ceil(timeoutMs / pollMs);
+
+            const getLatestRequiredRuns = async () => {
+              const runs = await github.rest.actions.listWorkflowRunsForRepo({
+                owner,
+                repo,
+                head_sha: sha,
+                per_page: 100
+              });
+
+              const latest = {};
+              for (const name of required) {
+                const match = runs.data.workflow_runs
+                  .filter(run => run.name === name)
+                  .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+                latest[name] = match || null;
+              }
+              return latest;
+            };
+
+            let latest = {};
+            for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+              latest = await getLatestRequiredRuns();
+              const state = Object.fromEntries(
+                required.map(name => [
+                  name,
+                  latest[name]
+                    ? `${latest[name].status}/${latest[name].conclusion ?? "null"}`
+                    : "missing"
+                ])
+              );
+              core.info(`Attempt ${attempt}/${maxAttempts}: ${JSON.stringify(state)}`);
+
+              const allCompleted = required.every(
+                name => latest[name] && latest[name].status === "completed"
+              );
+
+              if (allCompleted) {
+                const hasFailed = required.some(
+                  name => latest[name].conclusion !== "success"
+                );
+                core.setOutput("all_completed", "true");
+                core.setOutput("has_failed", hasFailed ? "true" : "false");
+                return;
+              }
+
+              if (attempt < maxAttempts) {
+                await new Promise(resolve => setTimeout(resolve, pollMs));
+              }
+            }
+
+            core.warning("Timed out waiting for required workflows to complete.");
+            core.setOutput("all_completed", "false");
+            core.setOutput("has_failed", "false");
+
+      - name: Exit if workflows are not all completed
+        if: steps.check.outputs.all_completed != 'true'
+        run: |
+          echo "Required workflows are still not completed. Exiting."
+          exit 0
+
+      - name: Exit if any required workflow failed
+        if: steps.check.outputs.has_failed == 'true'
+        run: |
+          echo "At least one required workflow failed. Exiting."
+          exit 0
+
+      - name: No failures
+        if: steps.check.outputs.all_completed == 'true' && steps.check.outputs.has_failed != 'true'
+        run: echo "no workflow failed"

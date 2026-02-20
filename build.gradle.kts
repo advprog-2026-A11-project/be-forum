@@ -1,12 +1,14 @@
 plugins {
     java
+    id("jacoco")
     id("org.springframework.boot") version "3.5.10"
     id("io.spring.dependency-management") version "1.1.7"
+    id("org.sonarqube") version "7.1.0.6387"
 }
 
 group = "id.ac.ui.cs.advprog"
 version = "0.0.1-SNAPSHOT"
-description = "be-forum"
+description = "forum"
 
 java {
     toolchain {
@@ -22,6 +24,13 @@ configurations {
 
 repositories {
     mavenCentral()
+}
+
+sonarqube {
+        properties {
+                property("sonar.projectKey", "advprog-2026-A11-project_be-forum")
+                property("sonar.organization", "adpro-a-kelompok-11")
+        }
 }
 
 dependencies {
@@ -44,4 +53,10 @@ dependencies {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+tasks.withType<JacocoReport> {
+    reports {
+        xml.required.set(true)
+    }
 }
