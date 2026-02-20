@@ -1,0 +1,75 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows:
+      - Lint
+      - Scorecard supply-chain security
+      - CI - Build Test Coverage Sonar
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Deploy (only if all checks succeeded)
+    runs-on: ubuntu-latest
+
+    # still require the triggering workflow to succeed
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Check all required workflows succeeded
+        uses: actions/github-script@v7
+        id: check
+
+        with:
+          script: |
+            const required = [
+              "Lint",
+              "Scorecard supply-chain security",
+              "CI - Build Test Coverage Sonar"
+            ];
+
+            const sha = context.payload.workflow_run.head_sha;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            const runs = await github.rest.actions.listWorkflowRunsForRepo({
+              owner,
+              repo,
+              head_sha: sha,
+              per_page: 100
+            });
+
+            const completed = new Map();
+
+            for (const run of runs.data.workflow_runs) {
+              if (required.includes(run.name)) {
+                completed.set(run.name, run.conclusion);
+              }
+            }
+
+            core.info(`Found results: ${JSON.stringify(Object.fromEntries(completed))}`);
+
+            const allPassed = required.every(
+              name => completed.get(name) === "success"
+            );
+
+            core.setOutput("all_passed", allPassed);
+
+      - name: Stop if not all passed
+        if: steps.check.outputs.all_passed != 'true'
+        run: |
+          echo "Not all required workflows passed — skipping deploy."
+          exit 1
+
+      - name: Check out code
+        if: steps.check.outputs.all_passed == 'true'
+        uses: actions/checkout@v4
+
+      - name: Dummy deploy (no-op)
+        if: steps.check.outputs.all_passed == 'true'
+        run: |
+          echo "All workflows succeeded"
+          echo "Running dummy deploy"
+          echo "Deploy simulation complete."
