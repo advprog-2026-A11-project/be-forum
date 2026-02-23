@@ -2,7 +2,7 @@ name: Deploy
 
 on:
   workflow_run:
-    workflows: ["Lint", "Scorecard supply-chain security", "CI - Build Test Coverage Sonar"]
+    workflows: ["CI - Build Test Coverage Sonar"] # this usually takes the longest
     types:
       - completed
 
