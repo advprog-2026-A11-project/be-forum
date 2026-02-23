@@ -14,7 +14,7 @@ jobs:
     steps:
       - name: Check status of linter.yml
         id: check-lint
-        uses: actions/github-script@9ac08808f993958e9de277fe43a64532a609130e
+        uses: actions/github-script@v6
         with:
           script: |
             const { data: lint } = await github.rest.actions.listWorkflowRuns({
@@ -32,7 +32,7 @@ jobs:
 
       - name: Check status of scorecard.yml
         id: check-scorecard
-        uses: actions/github-script@9ac08808f993958e9de277fe43a64532a609130e
+        uses: actions/github-script@v6
         with:
           script: |
             const { data: scorecard } = await github.rest.actions.listWorkflowRuns({
@@ -50,7 +50,7 @@ jobs:
 
       - name: Check status of sonarcloud.yml
         id: check-sonar
-        uses: actions/github-script@9ac08808f993958e9de277fe43a64532a609130e
+        uses: actions/github-script@v6
         with:
           script: |
             const { data: sonar } = await github.rest.actions.listWorkflowRuns({
