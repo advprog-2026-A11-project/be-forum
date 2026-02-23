@@ -21,7 +21,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               workflow_id: 'linter.yml',
-              branch: 'master',
+              branch: 'main',
               event: 'push',
               status: 'completed',
               per_page: 1
@@ -39,7 +39,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               workflow_id: 'scorecard.yml',
-              branch: 'master',
+              branch: 'main',
               event: 'push',
               status: 'completed',
               per_page: 1
@@ -57,21 +57,21 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               workflow_id: 'sonarcloud.yml',
-              branch: 'master',
+              branch: 'main',
               event: 'push',
               status: 'completed',
               per_page: 1
             });
-            return build.workflow_runs[0].conclusion === 'success';
+            return sonar.workflow_runs[0].conclusion === 'success';
         env:
           GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
 
       - name: Verify all workflows succeeded
         id: check-status
         run: |
-          if [[ "${{ steps.check-ci.outputs.result }}" == "true" && \
+          if [[ "${{ steps.check-lint.outputs.result }}" == "true" && \
                "${{ steps.check-scorecard.outputs.result }}" == "true" && \
-               "${{ steps.check-build.outputs.result }}" == "true" ]]; then
+               "${{ steps.check-sonar.outputs.result }}" == "true" ]]; then
             echo "all_success=true" >> $GITHUB_OUTPUT
           else
             echo "all_success=false" >> $GITHUB_OUTPUT
