@@ -66,6 +66,9 @@ jobs:
               status: 'completed',
               per_page: 1
             });
+            if (scorecard.workflow_runs.length === 0) {
+              return false;
+            }
             return scorecard.workflow_runs[0].conclusion === 'success';
         env:
           GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
@@ -84,6 +87,9 @@ jobs:
               status: 'completed',
               per_page: 1
             });
+            if (sonar.workflow_runs.length === 0) {
+              return false;
+            }
             return sonar.workflow_runs[0].conclusion === 'success';
         env:
           GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
@@ -104,5 +110,32 @@ jobs:
     if: ${{ needs.check-workflow-status.outputs.all_success == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy to production
-        run: echo "Deploying to production..."
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPO_NAME }}:latest
+      - name: Releasing New Version
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            docker compose down || true
+            echo "${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
+            docker pull ${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPO_NAME }}:latest
+            cat > .env << EOL
+            POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+            POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            EOL
+            docker compose up --build -d
+            docker ps
