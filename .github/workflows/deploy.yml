@@ -130,7 +130,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           script: |
             docker compose down || true
-            echo "${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
+            docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} -p ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
             docker pull ${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPO_NAME }}:latest
             cat > .env << EOL
             POSTGRES_DB=${{ secrets.POSTGRES_DB }}
