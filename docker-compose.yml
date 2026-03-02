@@ -16,9 +16,7 @@ services:
       retries: 5
 
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ${DOCKER_HUB_USERNAME:-your-dockerhub-username}/${DOCKER_HUB_REPO_NAME:-your-repo-name}:latest
     environment:
       - DB_URL=jdbc:postgresql://db:5432/${POSTGRES_DB:-beforum}
       - DB_USERNAME=${POSTGRES_USER:-beforum}
