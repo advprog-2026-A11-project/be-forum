@@ -113,17 +113,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Log in to Docker Hub
-        uses: docker/login-action@v1
+        uses: docker/login-action@62216b50636a8c8c25d246437857ed84232019ca
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
       - name: Build and push Docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@c382f710d39a5bb4e430307530a720f50c2d3318
         with:
           push: true
           tags: ${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPO_NAME }}:latest
       - name: Releasing New Version
-        uses: appleboy/ssh-action@v1.2.0
+        uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
