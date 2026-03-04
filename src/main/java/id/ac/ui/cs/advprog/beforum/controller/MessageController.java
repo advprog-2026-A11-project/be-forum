@@ -37,6 +37,13 @@ public class MessageController {
     return ResponseEntity.ok(service.listMessages());
   }
 
+  @GetMapping("/{id}")
+  public ResponseEntity<Message> getById(@PathVariable UUID id) {
+    Message message = service.findByIdWithReplies(id);
+    if (message == null) return ResponseEntity.notFound().build();
+    return ResponseEntity.ok(message);
+  }
+
   @PutMapping("/{id}")
   public ResponseEntity<Message> update(@PathVariable UUID id, @RequestBody CreateMessageRequest req) {
     Message updated = service.updateMessage(id, req.content());
@@ -49,6 +56,65 @@ public class MessageController {
     Message found = service.findById(id);
     if (found == null) return ResponseEntity.notFound().build();
     service.deleteMessage(id);
+    return ResponseEntity.noContent().build();
+  }
+
+  // ================== Reply Endpoints ==================
+
+  /**
+   * Create a reply to a message.
+   * The parent can be any message (including another reply), enabling nested replies.
+   */
+  @PostMapping("/{parentId}/replies")
+  public ResponseEntity<Message> createReply(
+      @PathVariable UUID parentId,
+      @RequestBody CreateMessageRequest req) {
+    Message reply = service.createReply(parentId, req.content());
+    if (reply == null) return ResponseEntity.notFound().build();
+    return ResponseEntity.ok(reply);
+  }
+
+  /**
+   * Get all direct replies to a message.
+   */
+  @GetMapping("/{parentId}/replies")
+  public ResponseEntity<List<Message>> getReplies(@PathVariable UUID parentId) {
+    Message parent = service.findById(parentId);
+    if (parent == null) return ResponseEntity.notFound().build();
+    return ResponseEntity.ok(service.getReplies(parentId));
+  }
+
+  /**
+   * Update a reply's content.
+   */
+  @PutMapping("/{parentId}/replies/{replyId}")
+  public ResponseEntity<Message> updateReply(
+      @PathVariable UUID parentId,
+      @PathVariable UUID replyId,
+      @RequestBody CreateMessageRequest req) {
+    // Verify the reply belongs to the parent
+    Message reply = service.findById(replyId);
+    if (reply == null || reply.getParentId() == null || !reply.getParentId().equals(parentId)) {
+      return ResponseEntity.notFound().build();
+    }
+    Message updated = service.updateReply(replyId, req.content());
+    if (updated == null) return ResponseEntity.notFound().build();
+    return ResponseEntity.ok(updated);
+  }
+
+  /**
+   * Delete a reply and all its nested replies.
+   */
+  @DeleteMapping("/{parentId}/replies/{replyId}")
+  public ResponseEntity<Void> deleteReply(
+      @PathVariable UUID parentId,
+      @PathVariable UUID replyId) {
+    // Verify the reply belongs to the parent
+    Message reply = service.findById(replyId);
+    if (reply == null || reply.getParentId() == null || !reply.getParentId().equals(parentId)) {
+      return ResponseEntity.notFound().build();
+    }
+    service.deleteReply(replyId);
     return ResponseEntity.noContent().build();
   }
 }
