@@ -10,6 +10,6 @@ import id.ac.ui.cs.advprog.beforum.model.Message;
 
 @Repository
 public interface MessageRepository extends JpaRepository<Message, UUID> {
-  
+
   List<Message> findByParent_IdOrderByCreatedAtAsc(UUID parentId);
 }

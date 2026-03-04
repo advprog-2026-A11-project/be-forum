@@ -22,244 +22,245 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class MessageServiceTest {
 
-    @Mock
-    private MessageRepository repository;
+  @Mock
+  private MessageRepository repository;
 
-    @InjectMocks
-    private MessageService service;
+  @InjectMocks
+  private MessageService service;
 
-    private Message parentMessage;
-    private Message reply;
-    private UUID parentId;
-    private UUID replyId;
+  private Message parentMessage;
+  private Message reply;
+  private UUID parentId;
+  private UUID replyId;
 
-    @BeforeEach
-    void setUp() {
-        parentId = UUID.randomUUID();
-        replyId = UUID.randomUUID();
+  @BeforeEach
+  void setUp() {
+    parentId = UUID.randomUUID();
+    replyId = UUID.randomUUID();
 
-        parentMessage = new Message();
-        parentMessage.setId(parentId);
-        parentMessage.setContent("Parent message content");
-        parentMessage.setCreatedAt(OffsetDateTime.now());
+    parentMessage = new Message();
+    parentMessage.setId(parentId);
+    parentMessage.setContent("Parent message content");
+    parentMessage.setCreatedAt(OffsetDateTime.now());
 
-        reply = new Message();
-        reply.setId(replyId);
-        reply.setContent("Reply content");
-        reply.setCreatedAt(OffsetDateTime.now());
-        reply.setParent(parentMessage);
-    }
+    reply = new Message();
+    reply.setId(replyId);
+    reply.setContent("Reply content");
+    reply.setCreatedAt(OffsetDateTime.now());
+    reply.setParent(parentMessage);
+  }
 
-    @Test
-    void createMessage_ShouldCreateMessage() {
-        String content = "New message";
-        when(repository.save(any(Message.class))).thenAnswer(invocation -> invocation.getArgument(0));
+  @Test
+  void createMessage_ShouldCreateMessage() {
+    String content = "New message";
+    when(repository.save(any(Message.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Message created = service.createMessage(content);
+    Message created = service.createMessage(content);
 
-        assertNotNull(created);
-        assertEquals(content, created.getContent());
-        assertNull(created.getParent());
-        verify(repository).save(any(Message.class));
-    }
+    assertNotNull(created);
+    assertEquals(content, created.getContent());
+    assertNull(created.getParent());
+    verify(repository).save(any(Message.class));
+  }
 
-    @Test
-    void createReply_ShouldCreateReplyWithParent() {
-        String replyContent = "This is a reply";
-        when(repository.findById(parentId)).thenReturn(Optional.of(parentMessage));
-        when(repository.save(any(Message.class))).thenAnswer(invocation -> invocation.getArgument(0));
+  @Test
+  void createReply_ShouldCreateReplyWithParent() {
+    String replyContent = "This is a reply";
+    when(repository.findById(parentId)).thenReturn(Optional.of(parentMessage));
+    when(repository.save(any(Message.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Message createdReply = service.createReply(parentId, replyContent);
+    Message createdReply = service.createReply(parentId, replyContent);
 
-        assertNotNull(createdReply);
-        assertEquals(replyContent, createdReply.getContent());
-        assertEquals(parentMessage, createdReply.getParent());
-        assertEquals(parentId, createdReply.getParentId());
-        verify(repository).findById(parentId);
-        verify(repository).save(any(Message.class));
-    }
+    assertNotNull(createdReply);
+    assertEquals(replyContent, createdReply.getContent());
+    assertEquals(parentMessage, createdReply.getParent());
+    assertEquals(parentId, createdReply.getParentId());
+    verify(repository).findById(parentId);
+    verify(repository).save(any(Message.class));
+  }
 
-    @Test
-    void createReply_ShouldReturnNullWhenParentNotFound() {
-        UUID nonExistentParentId = UUID.randomUUID();
-        when(repository.findById(nonExistentParentId)).thenReturn(Optional.empty());
+  @Test
+  void createReply_ShouldReturnNullWhenParentNotFound() {
+    UUID nonExistentParentId = UUID.randomUUID();
+    when(repository.findById(nonExistentParentId)).thenReturn(Optional.empty());
 
-        Message createdReply = service.createReply(nonExistentParentId, "Reply content");
+    Message createdReply = service.createReply(nonExistentParentId, "Reply content");
 
-        assertNull(createdReply);
-        verify(repository).findById(nonExistentParentId);
-        verify(repository, never()).save(any(Message.class));
-    }
+    assertNull(createdReply);
+    verify(repository).findById(nonExistentParentId);
+    verify(repository, never()).save(any(Message.class));
+  }
 
-    @Test
-    void createReply_ShouldAllowNestedReplies() {
-        // Create a reply to a reply (nested reply)
-        Message nestedReply = new Message();
-        nestedReply.setId(UUID.randomUUID());
-        nestedReply.setContent("Nested reply content");
-        nestedReply.setParent(reply);
-        nestedReply.setCreatedAt(OffsetDateTime.now());
+  @Test
+  void createReply_ShouldAllowNestedReplies() {
+    // Create a reply to a reply (nested reply)
+    Message nestedReply = new Message();
+    nestedReply.setId(UUID.randomUUID());
+    nestedReply.setContent("Nested reply content");
+    nestedReply.setParent(reply);
+    nestedReply.setCreatedAt(OffsetDateTime.now());
 
-        when(repository.findById(replyId)).thenReturn(Optional.of(reply));
-        when(repository.save(any(Message.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    when(repository.findById(replyId)).thenReturn(Optional.of(reply));
+    when(repository.save(any(Message.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Message createdNestedReply = service.createReply(replyId, "Nested reply content");
+    Message createdNestedReply = service.createReply(replyId, "Nested reply content");
 
-        assertNotNull(createdNestedReply);
-        assertEquals(reply, createdNestedReply.getParent());
-        assertEquals(replyId, createdNestedReply.getParentId());
-    }
+    assertNotNull(createdNestedReply);
+    assertEquals(reply, createdNestedReply.getParent());
+    assertEquals(replyId, createdNestedReply.getParentId());
+  }
 
-    @Test
-    void getReplies_ShouldReturnRepliesForParent() {
-        Message reply2 = new Message();
-        reply2.setId(UUID.randomUUID());
-        reply2.setContent("Second reply");
-        reply2.setParent(parentMessage);
+  @Test
+  void getReplies_ShouldReturnRepliesForParent() {
+    Message reply2 = new Message();
+    reply2.setId(UUID.randomUUID());
+    reply2.setContent("Second reply");
+    reply2.setParent(parentMessage);
 
-        List<Message> replies = Arrays.asList(reply, reply2);
-        when(repository.findByParent_IdOrderByCreatedAtAsc(parentId)).thenReturn(replies);
+    List<Message> replies = Arrays.asList(reply, reply2);
+    when(repository.findByParent_IdOrderByCreatedAtAsc(parentId)).thenReturn(replies);
 
-        List<Message> result = service.getReplies(parentId);
+    List<Message> result = service.getReplies(parentId);
 
-        assertEquals(2, result.size());
-        assertEquals(reply, result.get(0));
-        assertEquals(reply2, result.get(1));
-        verify(repository).findByParent_IdOrderByCreatedAtAsc(parentId);
-    }
+    assertEquals(2, result.size());
+    assertEquals(reply, result.get(0));
+    assertEquals(reply2, result.get(1));
+    verify(repository).findByParent_IdOrderByCreatedAtAsc(parentId);
+  }
 
-    @Test
-    void getReplies_ShouldReturnEmptyListWhenNoReplies() {
-        when(repository.findByParent_IdOrderByCreatedAtAsc(parentId)).thenReturn(List.of());
+  @Test
+  void getReplies_ShouldReturnEmptyListWhenNoReplies() {
+    when(repository.findByParent_IdOrderByCreatedAtAsc(parentId)).thenReturn(List.of());
 
-        List<Message> result = service.getReplies(parentId);
+    List<Message> result = service.getReplies(parentId);
 
-        assertTrue(result.isEmpty());
-    }
+    assertTrue(result.isEmpty());
+  }
 
-    @Test
-    void updateMessage_ShouldUpdateMessageContent() {
-        String newContent = "Updated message content";
-        when(repository.findById(parentId)).thenReturn(Optional.of(parentMessage));
-        when(repository.save(any(Message.class))).thenAnswer(invocation -> invocation.getArgument(0));
+  @Test
+  void updateMessage_ShouldUpdateMessageContent() {
+    String newContent = "Updated message content";
+    when(repository.findById(parentId)).thenReturn(Optional.of(parentMessage));
+    when(repository.save(any(Message.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Message updated = service.updateMessage(parentId, newContent);
+    Message updated = service.updateMessage(parentId, newContent);
 
-        assertNotNull(updated);
-        assertEquals(newContent, updated.getContent());
-        verify(repository).findById(parentId);
-        verify(repository).save(any(Message.class));
-    }
+    assertNotNull(updated);
+    assertEquals(newContent, updated.getContent());
+    verify(repository).findById(parentId);
+    verify(repository).save(any(Message.class));
+  }
 
-    @Test
-    void updateMessage_ShouldReturnNullWhenNotFound() {
-        UUID nonExistentId = UUID.randomUUID();
-        when(repository.findById(nonExistentId)).thenReturn(Optional.empty());
+  @Test
+  void updateMessage_ShouldReturnNullWhenNotFound() {
+    UUID nonExistentId = UUID.randomUUID();
+    when(repository.findById(nonExistentId)).thenReturn(Optional.empty());
 
-        Message updated = service.updateMessage(nonExistentId, "New content");
+    Message updated = service.updateMessage(nonExistentId, "New content");
 
-        assertNull(updated);
-    }
+    assertNull(updated);
+  }
 
-    @Test
-    void deleteMessage_ShouldDeleteMessage() {
-        service.deleteMessage(parentId);
+  @Test
+  void deleteMessage_ShouldDeleteMessage() {
+    service.deleteMessage(parentId);
 
-        verify(repository).deleteById(parentId);
-    }
+    verify(repository).deleteById(parentId);
+  }
 
-    @Test
-    void findById_ShouldReturnMessage() {
-        when(repository.findById(parentId)).thenReturn(Optional.of(parentMessage));
+  @Test
+  void findById_ShouldReturnMessage() {
+    when(repository.findById(parentId)).thenReturn(Optional.of(parentMessage));
 
-        Message found = service.findById(parentId);
+    Message found = service.findById(parentId);
 
-        assertNotNull(found);
-        assertEquals(parentId, found.getId());
-    }
+    assertNotNull(found);
+    assertEquals(parentId, found.getId());
+  }
 
-    @Test
-    void findById_ShouldReturnNullWhenNotFound() {
-        UUID nonExistentId = UUID.randomUUID();
-        when(repository.findById(nonExistentId)).thenReturn(Optional.empty());
+  @Test
+  void findById_ShouldReturnNullWhenNotFound() {
+    UUID nonExistentId = UUID.randomUUID();
+    when(repository.findById(nonExistentId)).thenReturn(Optional.empty());
 
-        Message found = service.findById(nonExistentId);
+    Message found = service.findById(nonExistentId);
 
-        assertNull(found);
-    }
+    assertNull(found);
+  }
 
-    @Test
-    void listMessages_ShouldReturnAllMessages() {
-        Message msg1 = new Message();
-        msg1.setId(UUID.randomUUID());
-        msg1.setContent("Message 1");
-        
-        Message msg2 = new Message();
-        msg2.setId(UUID.randomUUID());
-        msg2.setContent("Message 2");
+  @Test
+  void listMessages_ShouldReturnAllMessages() {
+    Message msg1 = new Message();
+    msg1.setId(UUID.randomUUID());
+    msg1.setContent("Message 1");
 
-        List<Message> messages = Arrays.asList(msg1, msg2);
-        when(repository.findAll()).thenReturn(messages);
+    Message msg2 = new Message();
+    msg2.setId(UUID.randomUUID());
+    msg2.setContent("Message 2");
 
-        List<Message> result = service.listMessages();
+    List<Message> messages = Arrays.asList(msg1, msg2);
+    when(repository.findAll()).thenReturn(messages);
 
-        assertEquals(2, result.size());
-        verify(repository).findAll();
-    }
+    List<Message> result = service.listMessages();
 
-    @Test
-    void findByIdWithReplies_ShouldReturnMessageWithReplies() {
-        parentMessage.getReplies().add(reply);
-        when(repository.findById(parentId)).thenReturn(Optional.of(parentMessage));
+    assertEquals(2, result.size());
+    verify(repository).findAll();
+  }
 
-        Message result = service.findByIdWithReplies(parentId);
+  @Test
+  void findByIdWithReplies_ShouldReturnMessageWithReplies() {
+    parentMessage.getReplies().add(reply);
+    when(repository.findById(parentId)).thenReturn(Optional.of(parentMessage));
 
-        assertNotNull(result);
-        assertEquals(parentId, result.getId());
-        assertEquals(1, result.getReplies().size());
-    }
+    Message result = service.findByIdWithReplies(parentId);
 
-    @Test
-    void findByIdWithReplies_ShouldReturnNullWhenNotFound() {
-        UUID nonExistentId = UUID.randomUUID();
-        when(repository.findById(nonExistentId)).thenReturn(Optional.empty());
+    assertNotNull(result);
+    assertEquals(parentId, result.getId());
+    assertEquals(1, result.getReplies().size());
+  }
 
-        Message result = service.findByIdWithReplies(nonExistentId);
+  @Test
+  void findByIdWithReplies_ShouldReturnNullWhenNotFound() {
+    UUID nonExistentId = UUID.randomUUID();
+    when(repository.findById(nonExistentId)).thenReturn(Optional.empty());
 
-        assertNull(result);
-    }
+    Message result = service.findByIdWithReplies(nonExistentId);
 
-    @Test
-    void loadRepliesRecursively_ShouldLoadNestedReplies() {
-        Message nestedReply = new Message();
-        nestedReply.setId(UUID.randomUUID());
-        nestedReply.setContent("Nested reply");
-        nestedReply.setParent(reply);
-        
-        reply.getReplies().add(nestedReply);
-        parentMessage.getReplies().add(reply);
-        
-        when(repository.findById(parentId)).thenReturn(Optional.of(parentMessage));
+    assertNull(result);
+  }
 
-        Message result = service.findByIdWithReplies(parentId);
+  @Test
+  void loadRepliesRecursively_ShouldLoadNestedReplies() {
+    Message nestedReply = new Message();
+    nestedReply.setId(UUID.randomUUID());
+    nestedReply.setContent("Nested reply");
+    nestedReply.setParent(reply);
 
-        assertNotNull(result);
-        assertEquals(1, result.getReplies().size());
-        assertEquals(1, result.getReplies().get(0).getReplies().size());
-    }
+    reply.getReplies().add(nestedReply);
+    parentMessage.getReplies().add(reply);
 
-    @Test
-    void loadRepliesRecursively_ShouldHandleNullReplies() {
-        Message messageWithNullReplies = new Message();
-        messageWithNullReplies.setId(UUID.randomUUID());
-        messageWithNullReplies.setContent("Message without replies");
-        messageWithNullReplies.setReplies(null);
+    when(repository.findById(parentId)).thenReturn(Optional.of(parentMessage));
 
-        when(repository.findById(messageWithNullReplies.getId())).thenReturn(Optional.of(messageWithNullReplies));
+    Message result = service.findByIdWithReplies(parentId);
 
-        Message result = service.findByIdWithReplies(messageWithNullReplies.getId());
+    assertNotNull(result);
+    assertEquals(1, result.getReplies().size());
+    assertEquals(1, result.getReplies().get(0).getReplies().size());
+  }
 
-        assertNotNull(result);
-        assertNull(result.getReplies());
-    }
+  @Test
+  void loadRepliesRecursively_ShouldHandleNullReplies() {
+    Message messageWithNullReplies = new Message();
+    messageWithNullReplies.setId(UUID.randomUUID());
+    messageWithNullReplies.setContent("Message without replies");
+    messageWithNullReplies.setReplies(null);
+
+    when(repository.findById(messageWithNullReplies.getId())).thenReturn(
+        Optional.of(messageWithNullReplies));
+
+    Message result = service.findByIdWithReplies(messageWithNullReplies.getId());
+
+    assertNotNull(result);
+    assertNull(result.getReplies());
+  }
 }

@@ -12,6 +12,6 @@ class BeForumApplicationTests {
 
   @Test
   void main_ShouldRunApplication() {
-    BeForumApplication.main(new String[]{});
+    BeForumApplication.main(new String[] {});
   }
 }
