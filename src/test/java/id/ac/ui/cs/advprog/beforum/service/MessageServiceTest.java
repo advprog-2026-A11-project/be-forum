@@ -97,7 +97,6 @@ class MessageServiceTest {
 
   @Test
   void createReplyShouldAllowNestedReplies() {
-    // Create a reply to a reply (nested reply)
     Message nestedReply = new Message();
     nestedReply.setId(UUID.randomUUID());
     nestedReply.setContent("Nested reply content");

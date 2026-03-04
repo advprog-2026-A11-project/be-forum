@@ -197,7 +197,6 @@ class MessageControllerTest {
 
   @Test
   void createNestedReplyShouldWork() throws Exception {
-    // Test that replying to a reply works
     Message nestedReply = new Message();
     nestedReply.setId(UUID.randomUUID());
     nestedReply.setContent("Nested reply content");

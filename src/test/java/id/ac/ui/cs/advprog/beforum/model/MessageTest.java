@@ -61,26 +61,22 @@ class MessageTest {
 
   @Test
   void nestedRepliesShouldWork() {
-    // Create parent message
     Message parent = new Message();
     parent.setId(UUID.randomUUID());
     parent.setContent("Parent content");
 
-    // Create first level reply
     Message reply1 = new Message();
     reply1.setId(UUID.randomUUID());
     reply1.setContent("First level reply");
     reply1.setParent(parent);
     parent.getReplies().add(reply1);
 
-    // Create second level reply (reply to a reply)
     Message reply2 = new Message();
     reply2.setId(UUID.randomUUID());
     reply2.setContent("Second level reply");
     reply2.setParent(reply1);
     reply1.getReplies().add(reply2);
 
-    // Verify nested structure
     assertEquals(1, parent.getReplies().size());
     assertEquals(1, reply1.getReplies().size());
     assertEquals(parent.getId(), reply1.getParentId());

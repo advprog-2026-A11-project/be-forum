@@ -1,0 +1,8 @@
+#Organize Import Order for Google Java Style
+#Static imports first, then all other imports (alphabetically sorted)
+#Import via: Eclipse > Preferences > Java > Code Style > Organize Imports > Import...
+#
+#Format: Numbers indicate order (0 = first), \# prefix = static imports
+#
+0=\#
+1=
