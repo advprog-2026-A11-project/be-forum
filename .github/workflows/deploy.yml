@@ -2,107 +2,151 @@ name: Deploy
 
 on:
   workflow_run:
-    workflows:
-      - Lint
-      - Scorecard supply-chain security
-      - CI - Build Test Coverage Sonar
-    types: [completed]
-    branches: [main]
+    workflows: ["CI - Build Test Coverage Sonar"] # this usually takes the longest
+    types:
+      - completed
 
 jobs:
-  deploy:
-    name: Check prerequisite workflows
+  check-workflow-status:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' }}
-    permissions:
-      actions: read
-      contents: read
-
+    outputs:
+      all_success: ${{ steps.check-status.outputs.all_success }}
     steps:
-      - name: Wait for required workflows and evaluate results
-        uses: actions/github-script@v7
-        id: check
-
+      - name: Check status of linter.yml
+        id: check-lint
+        uses: actions/github-script@v6
         with:
           script: |
-            const required = [
-              "Lint",
-              "Scorecard supply-chain security",
-              "CI - Build Test Coverage Sonar"
-            ];
+            const { data: lint } = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'linter.yml',
+              branch: 'main',
+              event: 'push',
+              status: 'completed',
+              per_page: 5
+            });
 
-            const sha = context.payload.workflow_run.head_sha;
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const timeoutMs = 30 * 60 * 1000;
-            const pollMs = 20 * 1000;
-            const maxAttempts = Math.ceil(timeoutMs / pollMs);
+            console.log("=== DEBUG LINTER RUNS ===");
+            console.log("Total runs returned:", lint.workflow_runs.length);
 
-            const getLatestRequiredRuns = async () => {
-              const runs = await github.rest.actions.listWorkflowRunsForRepo({
-                owner,
-                repo,
-                head_sha: sha,
-                per_page: 100
-              });
+            lint.workflow_runs.forEach((run, i) => {
+              console.log(`Run[${i}]`);
+              console.log("  id:", run.id);
+              console.log("  status:", run.status);
+              console.log("  conclusion:", run.conclusion);
+              console.log("  event:", run.event);
+              console.log("  head_branch:", run.head_branch);
+              console.log("  created_at:", run.created_at);
+            });
 
-              const latest = {};
-              for (const name of required) {
-                const match = runs.data.workflow_runs
-                  .filter(run => run.name === name)
-                  .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
-                latest[name] = match || null;
-              }
-              return latest;
-            };
-
-            let latest = {};
-            for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-              latest = await getLatestRequiredRuns();
-              const state = Object.fromEntries(
-                required.map(name => [
-                  name,
-                  latest[name]
-                    ? `${latest[name].status}/${latest[name].conclusion ?? "null"}`
-                    : "missing"
-                ])
-              );
-              core.info(`Attempt ${attempt}/${maxAttempts}: ${JSON.stringify(state)}`);
-
-              const allCompleted = required.every(
-                name => latest[name] && latest[name].status === "completed"
-              );
-
-              if (allCompleted) {
-                const hasFailed = required.some(
-                  name => latest[name].conclusion !== "success"
-                );
-                core.setOutput("all_completed", "true");
-                core.setOutput("has_failed", hasFailed ? "true" : "false");
-                return;
-              }
-
-              if (attempt < maxAttempts) {
-                await new Promise(resolve => setTimeout(resolve, pollMs));
-              }
+            if (lint.workflow_runs.length === 0) {
+              console.log("❌ No workflow runs found");
+              return false;
             }
 
-            core.warning("Timed out waiting for required workflows to complete.");
-            core.setOutput("all_completed", "false");
-            core.setOutput("has_failed", "false");
+            const latest = lint.workflow_runs[0];
+            console.log("✅ Using latest run conclusion:", latest.conclusion);
 
-      - name: Exit if workflows are not all completed
-        if: steps.check.outputs.all_completed != 'true'
+            return latest.conclusion === 'success';
+        env:
+          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+
+      - name: Check status of scorecard.yml
+        id: check-scorecard
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { data: scorecard } = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'scorecard.yml',
+              branch: 'main',
+              event: 'push',
+              status: 'completed',
+              per_page: 1
+            });
+            if (scorecard.workflow_runs.length === 0) {
+              return false;
+            }
+            return scorecard.workflow_runs[0].conclusion === 'success';
+        env:
+          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+
+      - name: Check status of sonarcloud.yml
+        id: check-sonar
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { data: sonar } = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'sonarcloud.yml',
+              branch: 'main',
+              event: 'push',
+              status: 'completed',
+              per_page: 1
+            });
+            if (sonar.workflow_runs.length === 0) {
+              return false;
+            }
+            return sonar.workflow_runs[0].conclusion === 'success';
+        env:
+          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+
+      - name: Verify all workflows succeeded
+        id: check-status
         run: |
-          echo "Required workflows are still not completed. Exiting."
-          exit 0
+          if [[ "${{ steps.check-lint.outputs.result }}" == "true" && \
+               "${{ steps.check-scorecard.outputs.result }}" == "true" && \
+               "${{ steps.check-sonar.outputs.result }}" == "true" ]]; then
+            echo "all_success=true" >> $GITHUB_OUTPUT
+          else
+            echo "all_success=false" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Exit if any required workflow failed
-        if: steps.check.outputs.has_failed == 'true'
-        run: |
-          echo "At least one required workflow failed. Exiting."
-          exit 0
-
-      - name: No failures
-        if: steps.check.outputs.all_completed == 'true' && steps.check.outputs.has_failed != 'true'
-        run: echo "no workflow failed"
+  deploy:
+    needs: check-workflow-status
+    if: ${{ needs.check-workflow-status.outputs.all_success == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Log in to Docker Hub
+        uses: docker/login-action@62216b50636a8c8c25d246437857ed84232019ca
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+      - name: Build and push Docker image
+        uses: docker/build-push-action@c382f710d39a5bb4e430307530a720f50c2d3318
+        with:
+          push: true
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPO_NAME }}:latest
+      - name: Copy docker-compose.yml and Dockerfile to server
+        uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          source: "docker-compose.yml"
+          target: "/home/${{ secrets.SSH_USERNAME }}/app"
+      - name: Releasing New Version
+        uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd /home/${{ secrets.SSH_USERNAME }}/app
+            docker compose down || true
+            echo "${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
+            docker pull ${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPO_NAME }}:latest
+            cat > .env << EOL
+            POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+            POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            DOCKER_HUB_USERNAME=${{ secrets.DOCKER_HUB_USERNAME }}
+            DOCKER_HUB_REPO_NAME=${{ secrets.DOCKER_HUB_REPO_NAME }}
+            EOL
+            docker compose up -d
+            docker ps
