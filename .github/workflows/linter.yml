@@ -44,3 +44,4 @@ jobs:
           VALIDATE_JAVA: true
           LINTER_RULES_PATH: .github/checks
           JAVA_FILE_NAME: "google-check.xml"
+          FIX_GOOGLE_JAVA_FORMAT: true
