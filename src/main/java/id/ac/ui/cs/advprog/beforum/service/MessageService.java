@@ -25,7 +25,9 @@ public class MessageService {
 
   @Transactional(readOnly = true)
   public List<Message> listMessages() {
-    return repository.findAll();
+    List<Message> messages = repository.findAll();
+    messages.forEach(this::loadRepliesRecursively);
+    return messages;
   }
 
   @Transactional(readOnly = true)
@@ -46,5 +48,41 @@ public class MessageService {
   @Transactional
   public void deleteMessage(UUID id) {
     repository.deleteById(id);
+  }
+
+  @Transactional
+  public Message createReply(UUID parentId, String content) {
+    return repository.findById(parentId)
+        .map(parent -> {
+          Message reply = new Message();
+          reply.setContent(content);
+          reply.setParent(parent);
+          return repository.save(reply);
+        })
+        .orElse(null);
+  }
+
+  @Transactional(readOnly = true)
+  public List<Message> getReplies(UUID parentId) {
+    return repository.findByParentIdOrderByCreatedAtAsc(parentId);
+  }
+
+  @Transactional(readOnly = true)
+  public Message findByIdWithReplies(UUID id) {
+    return repository.findById(id)
+        .map(message -> {
+          loadRepliesRecursively(message);
+          return message;
+        })
+        .orElse(null);
+  }
+
+  private void loadRepliesRecursively(Message message) {
+    if (message.getReplies() != null) {
+      message.getReplies().size();
+      for (Message reply : message.getReplies()) {
+        loadRepliesRecursively(reply);
+      }
+    }
   }
 }

@@ -10,7 +10,7 @@ services:
     volumes:
       - beforum-db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-beforum} -d ${POSTGRES_DB:-beforum}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-beforum} -d ${POSTGRES_DB:-beforum}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -20,7 +20,7 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      - DB_URL=jdbc:postgresql://db:5432/${POSTGRES_DB:-beforum}
+      - DB_URL=jdbc:postgresql://db:5432/${POSTGRES_DB}
       - DB_USERNAME=${POSTGRES_USER:-beforum}
       - DB_PASSWORD=${POSTGRES_PASSWORD:-password}
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update

@@ -10,4 +10,8 @@ class BeForumApplicationTests {
   void contextLoads() {
   }
 
+  @Test
+  void mainShouldRunApplication() {
+    BeForumApplication.main(new String[] {});
+  }
 }
