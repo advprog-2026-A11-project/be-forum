@@ -1,16 +1,18 @@
 package id.ac.ui.cs.advprog.beforum.model;
 
-import org.junit.jupiter.api.Test;
-
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
 
 class MessageTest {
 
   @Test
-  void getParentId_ShouldReturnNullWhenNoParent() {
+  void getParentIdShouldReturnNullWhenNoParent() {
     Message message = new Message();
     message.setId(UUID.randomUUID());
     message.setContent("Test content");
@@ -19,7 +21,7 @@ class MessageTest {
   }
 
   @Test
-  void getParentId_ShouldReturnParentIdWhenParentExists() {
+  void getParentIdShouldReturnParentIdWhenParentExists() {
     Message parent = new Message();
     UUID parentId = UUID.randomUUID();
     parent.setId(parentId);
@@ -34,7 +36,7 @@ class MessageTest {
   }
 
   @Test
-  void replies_ShouldBeEmptyByDefault() {
+  void repliesShouldBeEmptyByDefault() {
     Message message = new Message();
 
     assertNotNull(message.getReplies());
@@ -42,7 +44,7 @@ class MessageTest {
   }
 
   @Test
-  void addReply_ShouldAddToRepliesList() {
+  void addReplyShouldAddToRepliesList() {
     Message parent = new Message();
     parent.setId(UUID.randomUUID());
     parent.setContent("Parent content");
@@ -58,7 +60,7 @@ class MessageTest {
   }
 
   @Test
-  void nestedReplies_ShouldWork() {
+  void nestedRepliesShouldWork() {
     // Create parent message
     Message parent = new Message();
     parent.setId(UUID.randomUUID());
@@ -86,7 +88,7 @@ class MessageTest {
   }
 
   @Test
-  void message_ShouldHaveCreatedAtTimestamp() {
+  void messageShouldHaveCreatedAtTimestamp() {
     OffsetDateTime before = OffsetDateTime.now();
     Message message = new Message();
     OffsetDateTime after = OffsetDateTime.now();
@@ -97,7 +99,7 @@ class MessageTest {
   }
 
   @Test
-  void message_ShouldHaveUUID() {
+  void messageShouldHaveUuid() {
     Message message = new Message();
 
     assertNotNull(message.getId());

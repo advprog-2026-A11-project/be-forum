@@ -1,23 +1,28 @@
 package id.ac.ui.cs.advprog.beforum.service;
 
-import id.ac.ui.cs.advprog.beforum.model.Message;
-import id.ac.ui.cs.advprog.beforum.repository.MessageRepository;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
 import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import id.ac.ui.cs.advprog.beforum.model.Message;
+import id.ac.ui.cs.advprog.beforum.repository.MessageRepository;
 
 @ExtendWith(MockitoExtension.class)
 class MessageServiceTest {
@@ -51,7 +56,7 @@ class MessageServiceTest {
   }
 
   @Test
-  void createMessage_ShouldCreateMessage() {
+  void createMessageShouldCreateMessage() {
     String content = "New message";
     when(repository.save(any(Message.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -64,7 +69,7 @@ class MessageServiceTest {
   }
 
   @Test
-  void createReply_ShouldCreateReplyWithParent() {
+  void createReplyShouldCreateReplyWithParent() {
     String replyContent = "This is a reply";
     when(repository.findById(parentId)).thenReturn(Optional.of(parentMessage));
     when(repository.save(any(Message.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -80,7 +85,7 @@ class MessageServiceTest {
   }
 
   @Test
-  void createReply_ShouldReturnNullWhenParentNotFound() {
+  void createReplyShouldReturnNullWhenParentNotFound() {
     UUID nonExistentParentId = UUID.randomUUID();
     when(repository.findById(nonExistentParentId)).thenReturn(Optional.empty());
 
@@ -92,7 +97,7 @@ class MessageServiceTest {
   }
 
   @Test
-  void createReply_ShouldAllowNestedReplies() {
+  void createReplyShouldAllowNestedReplies() {
     // Create a reply to a reply (nested reply)
     Message nestedReply = new Message();
     nestedReply.setId(UUID.randomUUID());
@@ -111,26 +116,26 @@ class MessageServiceTest {
   }
 
   @Test
-  void getReplies_ShouldReturnRepliesForParent() {
+  void getRepliesShouldReturnRepliesForParent() {
     Message reply2 = new Message();
     reply2.setId(UUID.randomUUID());
     reply2.setContent("Second reply");
     reply2.setParent(parentMessage);
 
     List<Message> replies = Arrays.asList(reply, reply2);
-    when(repository.findByParent_IdOrderByCreatedAtAsc(parentId)).thenReturn(replies);
+    when(repository.findByParentIdOrderByCreatedAtAsc(parentId)).thenReturn(replies);
 
     List<Message> result = service.getReplies(parentId);
 
     assertEquals(2, result.size());
     assertEquals(reply, result.get(0));
     assertEquals(reply2, result.get(1));
-    verify(repository).findByParent_IdOrderByCreatedAtAsc(parentId);
+    verify(repository).findByParentIdOrderByCreatedAtAsc(parentId);
   }
 
   @Test
-  void getReplies_ShouldReturnEmptyListWhenNoReplies() {
-    when(repository.findByParent_IdOrderByCreatedAtAsc(parentId)).thenReturn(List.of());
+  void getRepliesShouldReturnEmptyListWhenNoReplies() {
+    when(repository.findByParentIdOrderByCreatedAtAsc(parentId)).thenReturn(List.of());
 
     List<Message> result = service.getReplies(parentId);
 
@@ -138,7 +143,7 @@ class MessageServiceTest {
   }
 
   @Test
-  void updateMessage_ShouldUpdateMessageContent() {
+  void updateMessageShouldUpdateMessageContent() {
     String newContent = "Updated message content";
     when(repository.findById(parentId)).thenReturn(Optional.of(parentMessage));
     when(repository.save(any(Message.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -152,7 +157,7 @@ class MessageServiceTest {
   }
 
   @Test
-  void updateMessage_ShouldReturnNullWhenNotFound() {
+  void updateMessageShouldReturnNullWhenNotFound() {
     UUID nonExistentId = UUID.randomUUID();
     when(repository.findById(nonExistentId)).thenReturn(Optional.empty());
 
@@ -162,14 +167,14 @@ class MessageServiceTest {
   }
 
   @Test
-  void deleteMessage_ShouldDeleteMessage() {
+  void deleteMessageShouldDeleteMessage() {
     service.deleteMessage(parentId);
 
     verify(repository).deleteById(parentId);
   }
 
   @Test
-  void findById_ShouldReturnMessage() {
+  void findByIdShouldReturnMessage() {
     when(repository.findById(parentId)).thenReturn(Optional.of(parentMessage));
 
     Message found = service.findById(parentId);
@@ -179,7 +184,7 @@ class MessageServiceTest {
   }
 
   @Test
-  void findById_ShouldReturnNullWhenNotFound() {
+  void findByIdShouldReturnNullWhenNotFound() {
     UUID nonExistentId = UUID.randomUUID();
     when(repository.findById(nonExistentId)).thenReturn(Optional.empty());
 
@@ -189,7 +194,7 @@ class MessageServiceTest {
   }
 
   @Test
-  void listMessages_ShouldReturnAllMessages() {
+  void listMessagesShouldReturnAllMessages() {
     Message msg1 = new Message();
     msg1.setId(UUID.randomUUID());
     msg1.setContent("Message 1");
@@ -208,7 +213,7 @@ class MessageServiceTest {
   }
 
   @Test
-  void findByIdWithReplies_ShouldReturnMessageWithReplies() {
+  void findByIdWithRepliesShouldReturnMessageWithReplies() {
     parentMessage.getReplies().add(reply);
     when(repository.findById(parentId)).thenReturn(Optional.of(parentMessage));
 
@@ -220,7 +225,7 @@ class MessageServiceTest {
   }
 
   @Test
-  void findByIdWithReplies_ShouldReturnNullWhenNotFound() {
+  void findByIdWithRepliesShouldReturnNullWhenNotFound() {
     UUID nonExistentId = UUID.randomUUID();
     when(repository.findById(nonExistentId)).thenReturn(Optional.empty());
 
@@ -230,7 +235,7 @@ class MessageServiceTest {
   }
 
   @Test
-  void loadRepliesRecursively_ShouldLoadNestedReplies() {
+  void loadRepliesRecursivelyShouldLoadNestedReplies() {
     Message nestedReply = new Message();
     nestedReply.setId(UUID.randomUUID());
     nestedReply.setContent("Nested reply");
@@ -249,7 +254,7 @@ class MessageServiceTest {
   }
 
   @Test
-  void loadRepliesRecursively_ShouldHandleNullReplies() {
+  void loadRepliesRecursivelyShouldHandleNullReplies() {
     Message messageWithNullReplies = new Message();
     messageWithNullReplies.setId(UUID.randomUUID());
     messageWithNullReplies.setContent("Message without replies");

@@ -66,7 +66,7 @@ public class MessageService {
 
   @Transactional(readOnly = true)
   public List<Message> getReplies(UUID parentId) {
-    return repository.findByParent_IdOrderByCreatedAtAsc(parentId);
+    return repository.findByParentIdOrderByCreatedAtAsc(parentId);
   }
 
   @Transactional(readOnly = true)

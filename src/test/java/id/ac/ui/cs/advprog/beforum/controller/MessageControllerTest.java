@@ -1,8 +1,18 @@
 package id.ac.ui.cs.advprog.beforum.controller;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import id.ac.ui.cs.advprog.beforum.model.Message;
 import id.ac.ui.cs.advprog.beforum.service.MessageService;
+import java.time.OffsetDateTime;
+import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,17 +20,6 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-
-import java.time.OffsetDateTime;
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(MessageController.class)
 class MessageControllerTest {
@@ -57,7 +56,7 @@ class MessageControllerTest {
   }
 
   @Test
-  void createReply_ShouldReturnCreatedReply() throws Exception {
+  void createReplyShouldReturnCreatedReply() throws Exception {
     when(service.createReply(eq(parentId), eq("Reply content"))).thenReturn(reply);
 
     mockMvc.perform(post("/messages/{parentId}/replies", parentId)
@@ -72,7 +71,7 @@ class MessageControllerTest {
   }
 
   @Test
-  void createReply_ShouldReturn404WhenParentNotFound() throws Exception {
+  void createReplyShouldReturn404WhenParentNotFound() throws Exception {
     when(service.createReply(eq(parentId), any())).thenReturn(null);
 
     mockMvc.perform(post("/messages/{parentId}/replies", parentId)
@@ -82,7 +81,7 @@ class MessageControllerTest {
   }
 
   @Test
-  void getReplies_ShouldReturnListOfReplies() throws Exception {
+  void getRepliesShouldReturnListOfReplies() throws Exception {
     Message reply2 = new Message();
     reply2.setId(UUID.randomUUID());
     reply2.setContent("Second reply");
@@ -100,7 +99,7 @@ class MessageControllerTest {
   }
 
   @Test
-  void getReplies_ShouldReturn404WhenParentNotFound() throws Exception {
+  void getRepliesShouldReturn404WhenParentNotFound() throws Exception {
     when(service.findById(parentId)).thenReturn(null);
 
     mockMvc.perform(get("/messages/{parentId}/replies", parentId))
@@ -108,7 +107,7 @@ class MessageControllerTest {
   }
 
   @Test
-  void updateReply_ShouldReturnUpdatedReply() throws Exception {
+  void updateReplyShouldReturnUpdatedReply() throws Exception {
     String newContent = "Updated reply content";
     Message updatedReply = new Message();
     updatedReply.setId(replyId);
@@ -128,7 +127,7 @@ class MessageControllerTest {
   }
 
   @Test
-  void updateReply_ShouldReturn404WhenReplyNotFound() throws Exception {
+  void updateReplyShouldReturn404WhenReplyNotFound() throws Exception {
     when(service.findById(replyId)).thenReturn(null);
 
     mockMvc.perform(put("/messages/{parentId}/replies/{replyId}", parentId, replyId)
@@ -138,7 +137,7 @@ class MessageControllerTest {
   }
 
   @Test
-  void updateReply_ShouldReturn404WhenReplyNotBelongsToParent() throws Exception {
+  void updateReplyShouldReturn404WhenReplyNotBelongsToParent() throws Exception {
     UUID wrongParentId = UUID.randomUUID();
     when(service.findById(replyId)).thenReturn(reply);
 
@@ -149,7 +148,7 @@ class MessageControllerTest {
   }
 
   @Test
-  void deleteReply_ShouldReturn204() throws Exception {
+  void deleteReplyShouldReturn204() throws Exception {
     when(service.findById(replyId)).thenReturn(reply);
 
     mockMvc.perform(delete("/messages/{parentId}/replies/{replyId}", parentId, replyId))
@@ -159,7 +158,7 @@ class MessageControllerTest {
   }
 
   @Test
-  void deleteReply_ShouldReturn404WhenReplyNotFound() throws Exception {
+  void deleteReplyShouldReturn404WhenReplyNotFound() throws Exception {
     when(service.findById(replyId)).thenReturn(null);
 
     mockMvc.perform(delete("/messages/{parentId}/replies/{replyId}", parentId, replyId))
@@ -167,7 +166,7 @@ class MessageControllerTest {
   }
 
   @Test
-  void deleteReply_ShouldReturn404WhenReplyNotBelongsToParent() throws Exception {
+  void deleteReplyShouldReturn404WhenReplyNotBelongsToParent() throws Exception {
     UUID wrongParentId = UUID.randomUUID();
     when(service.findById(replyId)).thenReturn(reply);
 
@@ -176,7 +175,7 @@ class MessageControllerTest {
   }
 
   @Test
-  void getById_ShouldReturnMessageWithReplies() throws Exception {
+  void getByIdShouldReturnMessageWithReplies() throws Exception {
     parentMessage.getReplies().add(reply);
     when(service.findByIdWithReplies(parentId)).thenReturn(parentMessage);
 
@@ -189,7 +188,7 @@ class MessageControllerTest {
   }
 
   @Test
-  void getById_ShouldReturn404WhenMessageNotFound() throws Exception {
+  void getByIdShouldReturn404WhenMessageNotFound() throws Exception {
     when(service.findByIdWithReplies(parentId)).thenReturn(null);
 
     mockMvc.perform(get("/messages/{id}", parentId))
@@ -197,7 +196,7 @@ class MessageControllerTest {
   }
 
   @Test
-  void createNestedReply_ShouldWork() throws Exception {
+  void createNestedReplyShouldWork() throws Exception {
     // Test that replying to a reply works
     Message nestedReply = new Message();
     nestedReply.setId(UUID.randomUUID());
@@ -215,7 +214,7 @@ class MessageControllerTest {
   }
 
   @Test
-  void create_ShouldReturnCreatedMessage() throws Exception {
+  void createShouldReturnCreatedMessage() throws Exception {
     Message newMessage = new Message();
     newMessage.setId(UUID.randomUUID());
     newMessage.setContent("New message");
@@ -232,7 +231,7 @@ class MessageControllerTest {
   }
 
   @Test
-  void list_ShouldReturnAllMessages() throws Exception {
+  void listShouldReturnAllMessages() throws Exception {
     List<Message> messages = Arrays.asList(parentMessage, reply);
     when(service.listMessages()).thenReturn(messages);
 
@@ -244,7 +243,7 @@ class MessageControllerTest {
   }
 
   @Test
-  void update_ShouldReturnUpdatedMessage() throws Exception {
+  void updateShouldReturnUpdatedMessage() throws Exception {
     String newContent = "Updated content";
     Message updated = new Message();
     updated.setId(parentId);
@@ -262,7 +261,7 @@ class MessageControllerTest {
   }
 
   @Test
-  void update_ShouldReturn404WhenNotFound() throws Exception {
+  void updateShouldReturn404WhenNotFound() throws Exception {
     when(service.updateMessage(eq(parentId), any())).thenReturn(null);
 
     mockMvc.perform(put("/messages/{id}", parentId)
@@ -272,7 +271,7 @@ class MessageControllerTest {
   }
 
   @Test
-  void delete_ShouldReturn204() throws Exception {
+  void deleteShouldReturn204() throws Exception {
     when(service.findById(parentId)).thenReturn(parentMessage);
 
     mockMvc.perform(delete("/messages/{id}", parentId))
@@ -282,7 +281,7 @@ class MessageControllerTest {
   }
 
   @Test
-  void delete_ShouldReturn404WhenNotFound() throws Exception {
+  void deleteShouldReturn404WhenNotFound() throws Exception {
     when(service.findById(parentId)).thenReturn(null);
 
     mockMvc.perform(delete("/messages/{id}", parentId))
@@ -290,7 +289,7 @@ class MessageControllerTest {
   }
 
   @Test
-  void updateReply_ShouldReturn404WhenReplyHasNullParentId() throws Exception {
+  void updateReplyShouldReturn404WhenReplyHasNullParentId() throws Exception {
     Message orphanReply = new Message();
     orphanReply.setId(replyId);
     orphanReply.setContent("Orphan reply");
@@ -304,7 +303,7 @@ class MessageControllerTest {
   }
 
   @Test
-  void deleteReply_ShouldReturn404WhenReplyHasNullParentId() throws Exception {
+  void deleteReplyShouldReturn404WhenReplyHasNullParentId() throws Exception {
     Message orphanReply = new Message();
     orphanReply.setId(replyId);
     orphanReply.setContent("Orphan reply");
@@ -316,7 +315,7 @@ class MessageControllerTest {
   }
 
   @Test
-  void updateReply_ShouldReturn404WhenUpdateReturnsNull() throws Exception {
+  void updateReplyShouldReturn404WhenUpdateReturnsNull() throws Exception {
     when(service.findById(replyId)).thenReturn(reply);
     when(service.updateMessage(eq(replyId), any())).thenReturn(null);
 
