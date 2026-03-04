@@ -138,53 +138,34 @@ class MessageServiceTest {
     }
 
     @Test
-    void listTopLevelMessages_ShouldReturnOnlyTopLevelMessages() {
-        Message topLevel1 = new Message();
-        topLevel1.setId(UUID.randomUUID());
-        topLevel1.setContent("Top level 1");
-
-        Message topLevel2 = new Message();
-        topLevel2.setId(UUID.randomUUID());
-        topLevel2.setContent("Top level 2");
-
-        List<Message> topLevelMessages = Arrays.asList(topLevel1, topLevel2);
-        when(repository.findByParentIsNull()).thenReturn(topLevelMessages);
-
-        List<Message> result = service.listTopLevelMessages();
-
-        assertEquals(2, result.size());
-        verify(repository).findByParentIsNull();
-    }
-
-    @Test
-    void updateReply_ShouldUpdateReplyContent() {
-        String newContent = "Updated reply content";
-        when(repository.findById(replyId)).thenReturn(Optional.of(reply));
+    void updateMessage_ShouldUpdateMessageContent() {
+        String newContent = "Updated message content";
+        when(repository.findById(parentId)).thenReturn(Optional.of(parentMessage));
         when(repository.save(any(Message.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Message updated = service.updateReply(replyId, newContent);
+        Message updated = service.updateMessage(parentId, newContent);
 
         assertNotNull(updated);
         assertEquals(newContent, updated.getContent());
-        verify(repository).findById(replyId);
+        verify(repository).findById(parentId);
         verify(repository).save(any(Message.class));
     }
 
     @Test
-    void updateReply_ShouldReturnNullWhenReplyNotFound() {
+    void updateMessage_ShouldReturnNullWhenNotFound() {
         UUID nonExistentId = UUID.randomUUID();
         when(repository.findById(nonExistentId)).thenReturn(Optional.empty());
 
-        Message updated = service.updateReply(nonExistentId, "New content");
+        Message updated = service.updateMessage(nonExistentId, "New content");
 
         assertNull(updated);
     }
 
     @Test
-    void deleteReply_ShouldDeleteReply() {
-        service.deleteReply(replyId);
+    void deleteMessage_ShouldDeleteMessage() {
+        service.deleteMessage(parentId);
 
-        verify(repository).deleteById(replyId);
+        verify(repository).deleteById(parentId);
     }
 
     @Test
@@ -205,5 +186,80 @@ class MessageServiceTest {
         Message found = service.findById(nonExistentId);
 
         assertNull(found);
+    }
+
+    @Test
+    void listMessages_ShouldReturnAllMessages() {
+        Message msg1 = new Message();
+        msg1.setId(UUID.randomUUID());
+        msg1.setContent("Message 1");
+        
+        Message msg2 = new Message();
+        msg2.setId(UUID.randomUUID());
+        msg2.setContent("Message 2");
+
+        List<Message> messages = Arrays.asList(msg1, msg2);
+        when(repository.findAll()).thenReturn(messages);
+
+        List<Message> result = service.listMessages();
+
+        assertEquals(2, result.size());
+        verify(repository).findAll();
+    }
+
+    @Test
+    void findByIdWithReplies_ShouldReturnMessageWithReplies() {
+        parentMessage.getReplies().add(reply);
+        when(repository.findById(parentId)).thenReturn(Optional.of(parentMessage));
+
+        Message result = service.findByIdWithReplies(parentId);
+
+        assertNotNull(result);
+        assertEquals(parentId, result.getId());
+        assertEquals(1, result.getReplies().size());
+    }
+
+    @Test
+    void findByIdWithReplies_ShouldReturnNullWhenNotFound() {
+        UUID nonExistentId = UUID.randomUUID();
+        when(repository.findById(nonExistentId)).thenReturn(Optional.empty());
+
+        Message result = service.findByIdWithReplies(nonExistentId);
+
+        assertNull(result);
+    }
+
+    @Test
+    void loadRepliesRecursively_ShouldLoadNestedReplies() {
+        Message nestedReply = new Message();
+        nestedReply.setId(UUID.randomUUID());
+        nestedReply.setContent("Nested reply");
+        nestedReply.setParent(reply);
+        
+        reply.getReplies().add(nestedReply);
+        parentMessage.getReplies().add(reply);
+        
+        when(repository.findById(parentId)).thenReturn(Optional.of(parentMessage));
+
+        Message result = service.findByIdWithReplies(parentId);
+
+        assertNotNull(result);
+        assertEquals(1, result.getReplies().size());
+        assertEquals(1, result.getReplies().get(0).getReplies().size());
+    }
+
+    @Test
+    void loadRepliesRecursively_ShouldHandleNullReplies() {
+        Message messageWithNullReplies = new Message();
+        messageWithNullReplies.setId(UUID.randomUUID());
+        messageWithNullReplies.setContent("Message without replies");
+        messageWithNullReplies.setReplies(null);
+
+        when(repository.findById(messageWithNullReplies.getId())).thenReturn(Optional.of(messageWithNullReplies));
+
+        Message result = service.findByIdWithReplies(messageWithNullReplies.getId());
+
+        assertNotNull(result);
+        assertNull(result.getReplies());
     }
 }

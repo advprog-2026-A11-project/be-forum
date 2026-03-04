@@ -116,7 +116,7 @@ class MessageControllerTest {
         updatedReply.setParent(parentMessage);
 
         when(service.findById(replyId)).thenReturn(reply);
-        when(service.updateReply(eq(replyId), eq(newContent))).thenReturn(updatedReply);
+        when(service.updateMessage(eq(replyId), eq(newContent))).thenReturn(updatedReply);
 
         mockMvc.perform(put("/messages/{parentId}/replies/{replyId}", parentId, replyId)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -124,7 +124,7 @@ class MessageControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").value(newContent));
 
-        verify(service).updateReply(replyId, newContent);
+        verify(service).updateMessage(replyId, newContent);
     }
 
     @Test
@@ -155,7 +155,7 @@ class MessageControllerTest {
         mockMvc.perform(delete("/messages/{parentId}/replies/{replyId}", parentId, replyId))
                 .andExpect(status().isNoContent());
 
-        verify(service).deleteReply(replyId);
+        verify(service).deleteMessage(replyId);
     }
 
     @Test
@@ -212,5 +212,117 @@ class MessageControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").value("Nested reply content"))
                 .andExpect(jsonPath("$.parentId").value(replyId.toString()));
+    }
+
+    @Test
+    void create_ShouldReturnCreatedMessage() throws Exception {
+        Message newMessage = new Message();
+        newMessage.setId(UUID.randomUUID());
+        newMessage.setContent("New message");
+
+        when(service.createMessage("New message")).thenReturn(newMessage);
+
+        mockMvc.perform(post("/messages")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"content\": \"New message\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").value("New message"));
+
+        verify(service).createMessage("New message");
+    }
+
+    @Test
+    void list_ShouldReturnAllMessages() throws Exception {
+        List<Message> messages = Arrays.asList(parentMessage, reply);
+        when(service.listMessages()).thenReturn(messages);
+
+        mockMvc.perform(get("/messages"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2));
+
+        verify(service).listMessages();
+    }
+
+    @Test
+    void update_ShouldReturnUpdatedMessage() throws Exception {
+        String newContent = "Updated content";
+        Message updated = new Message();
+        updated.setId(parentId);
+        updated.setContent(newContent);
+
+        when(service.updateMessage(eq(parentId), eq(newContent))).thenReturn(updated);
+
+        mockMvc.perform(put("/messages/{id}", parentId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"content\": \"Updated content\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").value(newContent));
+
+        verify(service).updateMessage(parentId, newContent);
+    }
+
+    @Test
+    void update_ShouldReturn404WhenNotFound() throws Exception {
+        when(service.updateMessage(eq(parentId), any())).thenReturn(null);
+
+        mockMvc.perform(put("/messages/{id}", parentId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"content\": \"Updated content\"}"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void delete_ShouldReturn204() throws Exception {
+        when(service.findById(parentId)).thenReturn(parentMessage);
+
+        mockMvc.perform(delete("/messages/{id}", parentId))
+                .andExpect(status().isNoContent());
+
+        verify(service).deleteMessage(parentId);
+    }
+
+    @Test
+    void delete_ShouldReturn404WhenNotFound() throws Exception {
+        when(service.findById(parentId)).thenReturn(null);
+
+        mockMvc.perform(delete("/messages/{id}", parentId))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void updateReply_ShouldReturn404WhenReplyHasNullParentId() throws Exception {
+        Message orphanReply = new Message();
+        orphanReply.setId(replyId);
+        orphanReply.setContent("Orphan reply");
+
+        when(service.findById(replyId)).thenReturn(orphanReply);
+
+        mockMvc.perform(put("/messages/{parentId}/replies/{replyId}", parentId, replyId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"content\": \"Updated content\"}"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void deleteReply_ShouldReturn404WhenReplyHasNullParentId() throws Exception {
+        Message orphanReply = new Message();
+        orphanReply.setId(replyId);
+        orphanReply.setContent("Orphan reply");
+
+        when(service.findById(replyId)).thenReturn(orphanReply);
+
+        mockMvc.perform(delete("/messages/{parentId}/replies/{replyId}", parentId, replyId))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void updateReply_ShouldReturn404WhenUpdateReturnsNull() throws Exception {
+        when(service.findById(replyId)).thenReturn(reply);
+        when(service.updateMessage(eq(replyId), any())).thenReturn(null);
+
+        mockMvc.perform(put("/messages/{parentId}/replies/{replyId}", parentId, replyId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"content\": \"Updated content\"}"))
+                .andExpect(status().isNotFound());
     }
 }

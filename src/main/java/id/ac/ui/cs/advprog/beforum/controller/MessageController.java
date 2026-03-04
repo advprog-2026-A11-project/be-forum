@@ -1,9 +1,8 @@
 package id.ac.ui.cs.advprog.beforum.controller;
 
-import id.ac.ui.cs.advprog.beforum.model.Message;
-import id.ac.ui.cs.advprog.beforum.service.MessageService;
 import java.util.List;
 import java.util.UUID;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,6 +12,9 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import id.ac.ui.cs.advprog.beforum.model.Message;
+import id.ac.ui.cs.advprog.beforum.service.MessageService;
 
 @RestController
 @RequestMapping({"/messages", "/api/messages"})
@@ -59,12 +61,6 @@ public class MessageController {
     return ResponseEntity.noContent().build();
   }
 
-  // ================== Reply Endpoints ==================
-
-  /**
-   * Create a reply to a message.
-   * The parent can be any message (including another reply), enabling nested replies.
-   */
   @PostMapping("/{parentId}/replies")
   public ResponseEntity<Message> createReply(
       @PathVariable UUID parentId,
@@ -74,9 +70,6 @@ public class MessageController {
     return ResponseEntity.ok(reply);
   }
 
-  /**
-   * Get all direct replies to a message.
-   */
   @GetMapping("/{parentId}/replies")
   public ResponseEntity<List<Message>> getReplies(@PathVariable UUID parentId) {
     Message parent = service.findById(parentId);
@@ -84,37 +77,29 @@ public class MessageController {
     return ResponseEntity.ok(service.getReplies(parentId));
   }
 
-  /**
-   * Update a reply's content.
-   */
   @PutMapping("/{parentId}/replies/{replyId}")
   public ResponseEntity<Message> updateReply(
       @PathVariable UUID parentId,
       @PathVariable UUID replyId,
       @RequestBody CreateMessageRequest req) {
-    // Verify the reply belongs to the parent
     Message reply = service.findById(replyId);
     if (reply == null || reply.getParentId() == null || !reply.getParentId().equals(parentId)) {
       return ResponseEntity.notFound().build();
     }
-    Message updated = service.updateReply(replyId, req.content());
+    Message updated = service.updateMessage(replyId, req.content());
     if (updated == null) return ResponseEntity.notFound().build();
     return ResponseEntity.ok(updated);
   }
 
-  /**
-   * Delete a reply and all its nested replies.
-   */
   @DeleteMapping("/{parentId}/replies/{replyId}")
   public ResponseEntity<Void> deleteReply(
       @PathVariable UUID parentId,
       @PathVariable UUID replyId) {
-    // Verify the reply belongs to the parent
     Message reply = service.findById(replyId);
     if (reply == null || reply.getParentId() == null || !reply.getParentId().equals(parentId)) {
       return ResponseEntity.notFound().build();
     }
-    service.deleteReply(replyId);
+    service.deleteMessage(replyId);
     return ResponseEntity.noContent().build();
   }
 }
