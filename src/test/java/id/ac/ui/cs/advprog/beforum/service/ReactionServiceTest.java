@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -95,15 +96,16 @@ class ReactionServiceTest {
   }
 
   @Test
-  void addReactionShouldReturnExistingReactionWhenDuplicate() {
+  void addReactionShouldThrowWhenDuplicate() {
     when(messageRepository.findById(messageId)).thenReturn(Optional.of(message));
     when(reactionRepository.findByMessageIdAndUserIdAndReactionType(
         messageId, userId, ReactionType.UPVOTE
     )).thenReturn(Optional.of(reaction));
 
-    Reaction result = service.addReaction(messageId, userId, ReactionType.UPVOTE);
-
-    assertEquals(reaction, result);
+    assertThrows(
+        IllegalStateException.class,
+        () -> service.addReaction(messageId, userId, ReactionType.UPVOTE)
+    );
     verify(reactionRepository, never()).save(any(Reaction.class));
   }
 

@@ -96,6 +96,17 @@ class ReactionControllerTest {
   }
 
   @Test
+  void addReactionShouldReturn409WhenDuplicate() throws Exception {
+    when(service.addReaction(eq(messageId), eq(userId), eq(ReactionType.UPVOTE)))
+        .thenThrow(new IllegalStateException("User has already given this reaction"));
+
+    mockMvc.perform(post("/messages/{messageId}/reactions", messageId)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"userId\": \"user123\", \"reactionType\": \"UPVOTE\"}"))
+        .andExpect(status().isConflict());
+  }
+
+  @Test
   void addEmojiReactionShouldWork() throws Exception {
     reaction.setReactionType(ReactionType.FIRE);
     when(service.addReaction(
