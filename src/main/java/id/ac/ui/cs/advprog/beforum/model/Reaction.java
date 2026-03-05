@@ -2,19 +2,16 @@ package id.ac.ui.cs.advprog.beforum.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
-import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -26,33 +23,29 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "messages")
+@Table(name = "reactions")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
-public class Message {
+public class Reaction {
   @Id
   @Column(name = "id", updatable = false, nullable = false)
   private UUID id = UUID.randomUUID();
 
-  @Column(name = "content", nullable = false, columnDefinition = "TEXT")
-  private String content;
+  @Enumerated(EnumType.STRING)
+  @Column(name = "reaction_type", nullable = false)
+  private ReactionType reactionType;
+
+  @Column(name = "user_id", nullable = false)
+  private String userId;
 
   @Column(name = "created_at", nullable = false, columnDefinition = "TIMESTAMP WITH TIME ZONE")
   private OffsetDateTime createdAt = OffsetDateTime.now();
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "parent_id")
+  @JoinColumn(name = "message_id", nullable = false)
   @JsonBackReference
-  private Message parent;
+  private Message message;
 
-  @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
-  @JsonManagedReference
-  private List<Message> replies = new ArrayList<>();
-
-  @OneToMany(mappedBy = "message", cascade = CascadeType.ALL, orphanRemoval = true)
-  @JsonManagedReference
-  private List<Reaction> reactions = new ArrayList<>();
-
-  public UUID getParentId() {
-    return parent != null ? parent.getId() : null;
+  public UUID getMessageId() {
+    return message != null ? message.getId() : null;
   }
 }
