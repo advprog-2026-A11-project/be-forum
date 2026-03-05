@@ -2,9 +2,29 @@ FROM docker.io/library/eclipse-temurin:21-jdk-alpine@sha256:cafcfad1d9d3b6e7dd98
 
 WORKDIR /src/tk-adpro
 
-COPY . .
+# Increase Gradle wrapper timeout
+ENV GRADLE_OPTS="-Dorg.gradle.wrapper.timeout=600000"
+
+# Copy Gradle wrapper and config first (better layer caching)
+COPY gradlew .
+COPY gradle gradle
+COPY build.gradle.kts settings.gradle.kts ./
+
 RUN chmod +x gradlew
-RUN ./gradlew clean bootJar --no-daemon -x test
+
+# Download Gradle + dependencies (cached layer)
+RUN ./gradlew --no-daemon --stacktrace dependencies || true
+
+# Copy application source
+COPY src src
+
+# Build jar
+RUN ./gradlew clean bootJar \
+    --no-daemon \
+    --parallel \
+    -x test \
+    -Dorg.gradle.wrapper.timeout=600000
+
 
 FROM docker.io/library/eclipse-temurin:21-jre-alpine@sha256:4e9ab608d97796571b1d5bbcd1c9f430a89a5f03fe5aa6c093888ceb6756c502 AS runner
 
@@ -17,9 +37,9 @@ RUN addgroup -g ${USER_GID} ${USER_NAME} \
 
 USER ${USER_NAME}
 WORKDIR /opt/tk-adpro
+
 COPY --from=builder --chown=${USER_UID}:${USER_GID} /src/tk-adpro/build/libs/*.jar app.jar
 
 EXPOSE 8080
 
-ENTRYPOINT ["java"]
-CMD ["-jar", "app.jar"]
+ENTRYPOINT ["java","-jar","app.jar"]
