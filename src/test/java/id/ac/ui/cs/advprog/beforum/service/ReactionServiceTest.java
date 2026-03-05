@@ -7,20 +7,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import static org.mockito.ArgumentMatchers.any;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import id.ac.ui.cs.advprog.beforum.model.Message;
@@ -28,6 +19,16 @@ import id.ac.ui.cs.advprog.beforum.model.Reaction;
 import id.ac.ui.cs.advprog.beforum.model.ReactionType;
 import id.ac.ui.cs.advprog.beforum.repository.MessageRepository;
 import id.ac.ui.cs.advprog.beforum.repository.ReactionRepository;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class ReactionServiceTest {
@@ -70,10 +71,10 @@ class ReactionServiceTest {
   void addReactionShouldCreateReaction() {
     when(messageRepository.findById(messageId)).thenReturn(Optional.of(message));
     when(reactionRepository.findByMessageIdAndUserIdAndReactionType(
-      messageId, userId, ReactionType.FIRE
+        messageId, userId, ReactionType.FIRE
     )).thenReturn(Optional.empty());
     when(reactionRepository.save(any(Reaction.class)))
-      .thenAnswer(invocation -> invocation.getArgument(0));
+        .thenAnswer(invocation -> invocation.getArgument(0));
 
     Reaction created = service.addReaction(messageId, userId, ReactionType.FIRE);
 
@@ -99,7 +100,7 @@ class ReactionServiceTest {
   void addReactionShouldReturnExistingReactionWhenDuplicate() {
     when(messageRepository.findById(messageId)).thenReturn(Optional.of(message));
     when(reactionRepository.findByMessageIdAndUserIdAndReactionType(
-      messageId, userId, ReactionType.UPVOTE
+        messageId, userId, ReactionType.UPVOTE
     )).thenReturn(Optional.of(reaction));
 
     Reaction result = service.addReaction(messageId, userId, ReactionType.UPVOTE);
@@ -118,13 +119,13 @@ class ReactionServiceTest {
 
     when(messageRepository.findById(messageId)).thenReturn(Optional.of(message));
     when(reactionRepository.findByMessageIdAndUserIdAndReactionType(
-      messageId, userId, ReactionType.UPVOTE
+        messageId, userId, ReactionType.UPVOTE
     )).thenReturn(Optional.empty());
     when(reactionRepository.findByMessageIdAndUserIdAndReactionType(
-      messageId, userId, ReactionType.DOWNVOTE
+        messageId, userId, ReactionType.DOWNVOTE
     )).thenReturn(Optional.of(existingDownvote));
     when(reactionRepository.save(any(Reaction.class)))
-      .thenAnswer(invocation -> invocation.getArgument(0));
+        .thenAnswer(invocation -> invocation.getArgument(0));
 
     Reaction result = service.addReaction(messageId, userId, ReactionType.UPVOTE);
 
@@ -144,13 +145,13 @@ class ReactionServiceTest {
 
     when(messageRepository.findById(messageId)).thenReturn(Optional.of(message));
     when(reactionRepository.findByMessageIdAndUserIdAndReactionType(
-      messageId, userId, ReactionType.DOWNVOTE
+        messageId, userId, ReactionType.DOWNVOTE
     )).thenReturn(Optional.empty());
     when(reactionRepository.findByMessageIdAndUserIdAndReactionType(
-      messageId, userId, ReactionType.UPVOTE
+        messageId, userId, ReactionType.UPVOTE
     )).thenReturn(Optional.of(existingUpvote));
     when(reactionRepository.save(any(Reaction.class)))
-      .thenAnswer(invocation -> invocation.getArgument(0));
+        .thenAnswer(invocation -> invocation.getArgument(0));
 
     Reaction result = service.addReaction(messageId, userId, ReactionType.DOWNVOTE);
 
@@ -163,7 +164,7 @@ class ReactionServiceTest {
   @Test
   void removeReactionShouldDeleteExistingReaction() {
     when(reactionRepository.findByMessageIdAndUserIdAndReactionType(
-      messageId, userId, ReactionType.UPVOTE
+        messageId, userId, ReactionType.UPVOTE
     )).thenReturn(Optional.of(reaction));
 
     boolean removed = service.removeReaction(messageId, userId, ReactionType.UPVOTE);
@@ -175,7 +176,7 @@ class ReactionServiceTest {
   @Test
   void removeReactionShouldReturnFalseWhenReactionNotFound() {
     when(reactionRepository.findByMessageIdAndUserIdAndReactionType(
-      messageId, userId, ReactionType.UPVOTE
+        messageId, userId, ReactionType.UPVOTE
     )).thenReturn(Optional.empty());
 
     boolean removed = service.removeReaction(messageId, userId, ReactionType.UPVOTE);
@@ -227,25 +228,25 @@ class ReactionServiceTest {
   @Test
   void getReactionCountsByMessageIdShouldReturnCounts() {
     when(reactionRepository.countByMessageIdAndReactionType(
-      messageId, ReactionType.UPVOTE
+        messageId, ReactionType.UPVOTE
     )).thenReturn(5L);
     when(reactionRepository.countByMessageIdAndReactionType(
-      messageId, ReactionType.DOWNVOTE
+        messageId, ReactionType.DOWNVOTE
     )).thenReturn(2L);
     when(reactionRepository.countByMessageIdAndReactionType(
-      messageId, ReactionType.FIRE
+        messageId, ReactionType.FIRE
     )).thenReturn(3L);
     when(reactionRepository.countByMessageIdAndReactionType(
-      messageId, ReactionType.ROCKET
+        messageId, ReactionType.ROCKET
     )).thenReturn(0L);
     when(reactionRepository.countByMessageIdAndReactionType(
-      messageId, ReactionType.LAUGH
+        messageId, ReactionType.LAUGH
     )).thenReturn(1L);
     when(reactionRepository.countByMessageIdAndReactionType(
-      messageId, ReactionType.PARTY
+        messageId, ReactionType.PARTY
     )).thenReturn(0L);
     when(reactionRepository.countByMessageIdAndReactionType(
-      messageId, ReactionType.THINKING
+        messageId, ReactionType.THINKING
     )).thenReturn(0L);
 
     Map<ReactionType, Long> counts = service.getReactionCountsByMessageId(messageId);
@@ -284,23 +285,23 @@ class ReactionServiceTest {
   void addEmojiReactionShouldNotAffectVotes() {
     when(messageRepository.findById(messageId)).thenReturn(Optional.of(message));
     when(reactionRepository.findByMessageIdAndUserIdAndReactionType(
-      messageId, userId, ReactionType.FIRE
+        messageId, userId, ReactionType.FIRE
     )).thenReturn(Optional.empty());
     when(reactionRepository.save(any(Reaction.class)))
-      .thenAnswer(invocation -> invocation.getArgument(0));
+        .thenAnswer(invocation -> invocation.getArgument(0));
 
     Reaction result = service.addReaction(messageId, userId, ReactionType.FIRE);
 
     assertNotNull(result);
     assertEquals(ReactionType.FIRE, result.getReactionType());
     verify(reactionRepository, never())
-      .findByMessageIdAndUserIdAndReactionType(
-        messageId, userId, ReactionType.UPVOTE
-      );
+        .findByMessageIdAndUserIdAndReactionType(
+            messageId, userId, ReactionType.UPVOTE
+        );
     verify(reactionRepository, never())
-      .findByMessageIdAndUserIdAndReactionType(
-        messageId, userId, ReactionType.DOWNVOTE
-      );
+        .findByMessageIdAndUserIdAndReactionType(
+            messageId, userId, ReactionType.DOWNVOTE
+        );
     verify(reactionRepository).save(any(Reaction.class));
   }
 }

@@ -1,6 +1,5 @@
 package id.ac.ui.cs.advprog.beforum.service;
 
-
 import id.ac.ui.cs.advprog.beforum.model.Message;
 import id.ac.ui.cs.advprog.beforum.model.Reaction;
 import id.ac.ui.cs.advprog.beforum.model.ReactionType;
@@ -35,11 +34,11 @@ public class ReactionService {
 
     // Check if user already has this reaction on this message
     Optional<Reaction> existingReaction =
-      reactionRepository.findByMessageIdAndUserIdAndReactionType(
-          messageId,
-          userId,
-          reactionType
-      );
+        reactionRepository.findByMessageIdAndUserIdAndReactionType(
+            messageId,
+            userId,
+            reactionType
+        );
     if (existingReaction.isPresent()) {
       return existingReaction.get(); // Reaction already exists
     }
@@ -47,14 +46,13 @@ public class ReactionService {
     // For upvote/downvote, remove any existing vote before adding new one
     if (reactionType == ReactionType.UPVOTE || reactionType == ReactionType.DOWNVOTE) {
       ReactionType oppositeVote = reactionType == ReactionType.UPVOTE
-        ? ReactionType.DOWNVOTE
-        : ReactionType.UPVOTE;
-        reactionRepository.findByMessageIdAndUserIdAndReactionType(
+          ? ReactionType.DOWNVOTE
+          : ReactionType.UPVOTE;
+      reactionRepository.findByMessageIdAndUserIdAndReactionType(
           messageId,
           userId,
           oppositeVote
-        )
-          .ifPresent(reactionRepository::delete);
+      ).ifPresent(reactionRepository::delete);
     }
 
     Reaction reaction = new Reaction();
@@ -65,14 +63,14 @@ public class ReactionService {
   }
 
   @Transactional
-    public boolean removeReaction(UUID messageId,
-                  String userId,
-                  ReactionType reactionType) {
+  public boolean removeReaction(UUID messageId,
+                                String userId,
+                                ReactionType reactionType) {
     Optional<Reaction> existingReaction =
-      reactionRepository.findByMessageIdAndUserIdAndReactionType(
-        messageId,
-        userId,
-        reactionType);
+        reactionRepository.findByMessageIdAndUserIdAndReactionType(
+            messageId,
+            userId,
+            reactionType);
     if (existingReaction.isPresent()) {
       reactionRepository.delete(existingReaction.get());
       return true;
@@ -88,8 +86,8 @@ public class ReactionService {
   @Transactional(readOnly = true)
   public List<Reaction> getUserReactionsOnMessage(UUID messageId, String userId) {
     return reactionRepository.findByMessageIdAndUserId(
-      messageId,
-      userId
+        messageId,
+        userId
     );
   }
 
@@ -97,10 +95,10 @@ public class ReactionService {
   public Map<ReactionType, Long> getReactionCountsByMessageId(UUID messageId) {
     Map<ReactionType, Long> counts = new EnumMap<>(ReactionType.class);
     for (ReactionType type : ReactionType.values()) {
-        counts.put(
+      counts.put(
           type,
           reactionRepository.countByMessageIdAndReactionType(messageId, type)
-        );
+      );
     }
     return counts;
   }
