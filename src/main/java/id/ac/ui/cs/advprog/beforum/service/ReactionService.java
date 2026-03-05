@@ -40,7 +40,7 @@ public class ReactionService {
             reactionType
         );
     if (existingReaction.isPresent()) {
-      return existingReaction.get(); // Reaction already exists
+      throw new IllegalStateException("User has already given this reaction");
     }
 
     // For upvote/downvote, remove any existing vote before adding new one

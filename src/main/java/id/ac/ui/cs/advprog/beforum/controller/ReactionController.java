@@ -32,7 +32,12 @@ public class ReactionController {
   public ResponseEntity<Reaction> addReaction(
       @PathVariable UUID messageId,
       @RequestBody ReactionRequest req) {
-    Reaction reaction = service.addReaction(messageId, req.userId(), req.reactionType());
+    Reaction reaction;
+    try {
+      reaction = service.addReaction(messageId, req.userId(), req.reactionType());
+    } catch (IllegalStateException e) {
+      return ResponseEntity.status(409).build();
+    }
     if (reaction == null) {
       return ResponseEntity.notFound().build();
     }
