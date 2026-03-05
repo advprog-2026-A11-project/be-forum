@@ -7,18 +7,18 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import id.ac.ui.cs.advprog.beforum.model.Message;
+import id.ac.ui.cs.advprog.beforum.model.Reaction;
+import id.ac.ui.cs.advprog.beforum.model.ReactionType;
+import id.ac.ui.cs.advprog.beforum.repository.MessageRepository;
+import id.ac.ui.cs.advprog.beforum.repository.ReactionRepository;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import id.ac.ui.cs.advprog.beforum.model.Message;
-import id.ac.ui.cs.advprog.beforum.model.Reaction;
-import id.ac.ui.cs.advprog.beforum.model.ReactionType;
-import id.ac.ui.cs.advprog.beforum.repository.MessageRepository;
-import id.ac.ui.cs.advprog.beforum.repository.ReactionRepository;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
