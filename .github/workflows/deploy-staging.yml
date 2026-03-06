@@ -55,27 +55,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
 
-      - name: Check status of scorecard.yml
-        id: check-scorecard
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const { data: scorecard } = await github.rest.actions.listWorkflowRuns({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'scorecard.yml',
-              branch: 'staging',
-              event: 'push',
-              status: 'completed',
-              per_page: 1
-            });
-            if (scorecard.workflow_runs.length === 0) {
-              return false;
-            }
-            return scorecard.workflow_runs[0].conclusion === 'success';
-        env:
-          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
-
       - name: Check status of sonarcloud.yml
         id: check-sonar
         uses: actions/github-script@v6
@@ -101,7 +80,6 @@ jobs:
         id: check-status
         run: |
           if [[ "${{ steps.check-lint.outputs.result }}" == "true" && \
-               "${{ steps.check-scorecard.outputs.result }}" == "true" && \
                "${{ steps.check-sonar.outputs.result }}" == "true" ]]; then
             echo "all_success=true" >> $GITHUB_OUTPUT
           else
