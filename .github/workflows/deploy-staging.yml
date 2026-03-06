@@ -1,6 +1,8 @@
 name: Deploy Staging
 
 on:
+permissions:
+  contents: read
   workflow_run:
     workflows: ["CI - Build Test Coverage Sonar"] # this usually takes the longest
     types:
