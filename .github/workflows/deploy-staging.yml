@@ -1,94 +1,14 @@
 name: Deploy Staging
 
 on:
-  workflow_run:
-    workflows: ["CI - Build Test Coverage Sonar"]
-    types:
-      - completed
+  push:
+    branches: "staging"
 
 permissions:
   contents: read
 
 jobs:
-  check-workflow-status:
-    runs-on: ubuntu-latest
-    outputs:
-      all_success: ${{ steps.check-status.outputs.all_success }}
-    steps:
-      - name: Check status of linter.yml
-        id: check-lint
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const { data: lint } = await github.rest.actions.listWorkflowRuns({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'linter.yml',
-              branch: 'staging',
-              event: 'push',
-              status: 'completed',
-              per_page: 5
-            });
-
-            console.log("=== DEBUG LINTER RUNS ===");
-            console.log("Total runs returned:", lint.workflow_runs.length);
-
-            lint.workflow_runs.forEach((run, i) => {
-              console.log(`Run[${i}]`);
-              console.log("  id:", run.id);
-              console.log("  status:", run.status);
-              console.log("  conclusion:", run.conclusion);
-              console.log("  event:", run.event);
-              console.log("  head_branch:", run.head_branch);
-              console.log("  created_at:", run.created_at);
-            });
-
-            if (lint.workflow_runs.length === 0) {
-              console.log("❌ No workflow runs found");
-              return false;
-            }
-
-            const latest = lint.workflow_runs[0];
-            console.log("✅ Using latest run conclusion:", latest.conclusion);
-
-            return latest.conclusion === 'success';
-        env:
-          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
-
-      - name: Check status of sonarcloud.yml
-        id: check-sonar
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const { data: sonar } = await github.rest.actions.listWorkflowRuns({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'sonarcloud.yml',
-              branch: 'staging',
-              event: 'push',
-              status: 'completed',
-              per_page: 1
-            });
-            if (sonar.workflow_runs.length === 0) {
-              return false;
-            }
-            return sonar.workflow_runs[0].conclusion === 'success';
-        env:
-          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
-
-      - name: Verify all workflows succeeded
-        id: check-status
-        run: |
-          if [[ "${{ steps.check-lint.outputs.result }}" == "true" && \
-               "${{ steps.check-sonar.outputs.result }}" == "true" ]]; then
-            echo "all_success=true" >> $GITHUB_OUTPUT
-          else
-            echo "all_success=false" >> $GITHUB_OUTPUT
-          fi
-
   deploy:
-    needs: check-workflow-status
-    if: ${{ needs.check-workflow-status.outputs.all_success == 'true' && github.event.workflow_run.head_branch == 'staging' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
