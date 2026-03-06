@@ -34,7 +34,7 @@ jobs:
       - name: Releasing New Version
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
-          host: ${{ secrets.SSH_HOST }}
+          host: ${{ secrets.SSH_STAGING_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           script: |
