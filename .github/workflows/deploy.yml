@@ -5,6 +5,7 @@ on:
     workflows: [ "CI - Build Test Coverage Sonar" ] # this usually takes the longest
     types:
       - completed
+    branches: [main]
   
 
 jobs:
