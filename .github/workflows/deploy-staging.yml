@@ -46,6 +46,8 @@ jobs:
             POSTGRES_DB=${{ secrets.POSTGRES_DB }}
             POSTGRES_USER=${{ secrets.POSTGRES_USER }}
             POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            DOCKER_HUB_USERNAME=${{ secrets.DOCKER_HUB_USERNAME }}
+            DOCKER_HUB_REPO_NAME=${{secrets.DOCKER_HUB_STAGING_REPO_NAME}}
             EOL
             docker compose up -d
             docker ps
