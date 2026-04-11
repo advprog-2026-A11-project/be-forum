@@ -13,4 +13,14 @@ public interface MessageRepository extends JpaRepository<Message, UUID> {
 
   @Query("SELECT m FROM Message m WHERE m.parent.id = :parentId ORDER BY m.createdAt ASC")
   List<Message> findByParentIdOrderByCreatedAtAsc(@Param("parentId") UUID parentId);
+
+  @Query("SELECT m FROM Message m WHERE m.parent IS NULL ORDER BY m.createdAt DESC")
+  List<Message> findTopLevelOrderByCreatedAtDesc();
+
+  @Query("""
+      SELECT m FROM Message m
+      WHERE m.parent IS NULL AND m.readingId = :readingId
+      ORDER BY m.createdAt DESC
+      """)
+  List<Message> findTopLevelByReadingIdOrderByCreatedAtDesc(@Param("readingId") String readingId);
 }
