@@ -51,11 +51,13 @@ class MessageControllerTest {
     parentMessage = new Message();
     parentMessage.setId(parentId);
     parentMessage.setContent("Parent message content");
+    parentMessage.setReadingId("reading-1");
     parentMessage.setCreatedAt(OffsetDateTime.now());
 
     reply = new Message();
     reply.setId(replyId);
     reply.setContent("Reply content");
+    reply.setReadingId("reading-1");
     reply.setCreatedAt(OffsetDateTime.now());
     reply.setParent(parentMessage);
   }
@@ -205,6 +207,7 @@ class MessageControllerTest {
     Message nestedReply = new Message();
     nestedReply.setId(UUID.randomUUID());
     nestedReply.setContent("Nested reply content");
+    nestedReply.setReadingId("reading-1");
     nestedReply.setParent(reply);
 
     when(service.createReply(eq(replyId), eq("Nested reply content"))).thenReturn(nestedReply);
@@ -222,28 +225,69 @@ class MessageControllerTest {
     Message newMessage = new Message();
     newMessage.setId(UUID.randomUUID());
     newMessage.setContent("New message");
+    newMessage.setReadingId("reading-1");
 
-    when(service.createMessage("New message")).thenReturn(newMessage);
+    when(service.createMessage("New message", "reading-1")).thenReturn(newMessage);
 
     mockMvc.perform(post("/messages")
             .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"content\": \"New message\"}"))
+            .content("{\"content\": \"New message\", \"readingId\": \"reading-1\"}"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.content").value("New message"));
+        .andExpect(jsonPath("$.content").value("New message"))
+        .andExpect(jsonPath("$.readingId").value("reading-1"));
 
-    verify(service).createMessage("New message");
+    verify(service).createMessage("New message", "reading-1");
+  }
+
+  @Test
+  void createShouldReturnBadRequestWhenReadingIdMissing() throws Exception {
+    mockMvc.perform(post("/messages")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"content\": \"New message\"}"))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void createShouldReturnBadRequestWhenReadingIdBlank() throws Exception {
+    mockMvc.perform(post("/messages")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"content\": \"New message\", \"readingId\": \"   \"}"))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void createShouldReturnBadRequestWhenServiceThrowsIllegalArgumentException() throws Exception {
+    when(service.createMessage("New message", "reading-1"))
+        .thenThrow(new IllegalArgumentException("readingId is required for thread creation"));
+
+    mockMvc.perform(post("/messages")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"content\": \"New message\", \"readingId\": \"reading-1\"}"))
+        .andExpect(status().isBadRequest());
   }
 
   @Test
   void listShouldReturnAllMessages() throws Exception {
     List<Message> messages = Arrays.asList(parentMessage, reply);
-    when(service.listMessages()).thenReturn(messages);
+    when(service.listMessages(null)).thenReturn(messages);
 
     mockMvc.perform(get("/messages"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.length()").value(2));
 
-    verify(service).listMessages();
+    verify(service).listMessages(null);
+  }
+
+  @Test
+  void listShouldFilterByReadingId() throws Exception {
+    when(service.listMessages("reading-1")).thenReturn(List.of(parentMessage));
+
+    mockMvc.perform(get("/messages").param("readingId", "reading-1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(1))
+        .andExpect(jsonPath("$[0].readingId").value("reading-1"));
+
+    verify(service).listMessages("reading-1");
   }
 
   @Test

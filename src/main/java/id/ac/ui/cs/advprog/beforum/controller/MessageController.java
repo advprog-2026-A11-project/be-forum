@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -24,18 +25,26 @@ public class MessageController {
     this.service = service;
   }
 
-  public static record CreateMessageRequest(String content) {
+  public static record CreateMessageRequest(String content, String readingId) {
   }
 
   @PostMapping
   public ResponseEntity<Message> create(@RequestBody CreateMessageRequest req) {
-    Message created = service.createMessage(req.content());
-    return ResponseEntity.ok(created);
+    if (req == null || req.readingId() == null || req.readingId().isBlank()) {
+      return ResponseEntity.badRequest().build();
+    }
+
+    try {
+      Message created = service.createMessage(req.content(), req.readingId());
+      return ResponseEntity.ok(created);
+    } catch (IllegalArgumentException ex) {
+      return ResponseEntity.badRequest().build();
+    }
   }
 
   @GetMapping
-  public ResponseEntity<List<Message>> list() {
-    return ResponseEntity.ok(service.listMessages());
+  public ResponseEntity<List<Message>> list(@RequestParam(required = false) String readingId) {
+    return ResponseEntity.ok(service.listMessages(readingId));
   }
 
   @GetMapping("/{id}")
