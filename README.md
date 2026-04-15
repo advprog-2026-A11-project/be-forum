@@ -4,6 +4,9 @@
 
 Copy .env.example to .env, then fill in with the appropriate values
 
+Required auth integration env:
+- `AUTH_BACKEND_URL` (example: `http://localhost:8081`)
+
 ```bash
 docker compose up --build -d
 ```

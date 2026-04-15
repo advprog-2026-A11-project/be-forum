@@ -39,7 +39,7 @@ class AuthServiceTest {
             .body(
               """
                 {
-                  "role": "STUDENT",
+                  "role": "ADMIN",
                   "profile": {
                     "id": "%s",
                     "role": "ADMIN",

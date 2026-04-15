@@ -23,6 +23,7 @@ services:
       - DB_URL=jdbc:postgresql://db:5432/${POSTGRES_DB}
       - DB_USERNAME=${POSTGRES_USER:-beforum}
       - DB_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - AUTH_BACKEND_URL=${AUTH_BACKEND_URL:-http://localhost:8081}
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
     ports:
       - "8080:8080"
