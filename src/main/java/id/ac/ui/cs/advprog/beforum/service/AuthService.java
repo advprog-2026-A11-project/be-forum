@@ -17,7 +17,9 @@ public class AuthService {
 
   private final RestClient restClient;
 
-  public AuthService(RestClient.Builder builder, @Value("${auth.backend-url}") String authBackendUrl) {
+  public AuthService(
+      RestClient.Builder builder,
+      @Value("${auth.backend-url}") String authBackendUrl) {
     this.restClient = builder.baseUrl(authBackendUrl).build();
   }
 
@@ -55,9 +57,11 @@ public class AuthService {
       if (status == HttpStatus.UNAUTHORIZED || status == HttpStatus.FORBIDDEN) {
         throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized", ex);
       }
-      throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Auth backend unavailable", ex);
+      throw new ResponseStatusException(
+          HttpStatus.SERVICE_UNAVAILABLE, "Auth backend unavailable", ex);
     } catch (RestClientException ex) {
-      throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Auth backend unavailable", ex);
+      throw new ResponseStatusException(
+          HttpStatus.SERVICE_UNAVAILABLE, "Auth backend unavailable", ex);
     }
   }
 

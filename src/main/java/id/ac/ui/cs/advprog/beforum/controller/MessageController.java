@@ -38,7 +38,10 @@ public class MessageController {
 
   @PostMapping
   public ResponseEntity<Message> create(
-      @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+      @RequestHeader(
+          value = HttpHeaders.AUTHORIZATION,
+          required = false)
+      String authorizationHeader,
       @RequestBody CreateMessageRequest req) {
     if (req == null || req.readingId() == null || req.readingId().isBlank()) {
       return ResponseEntity.badRequest().build();
@@ -69,7 +72,10 @@ public class MessageController {
 
   @PutMapping("/{id}")
   public ResponseEntity<Message> update(
-      @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+      @RequestHeader(
+          value = HttpHeaders.AUTHORIZATION,
+          required = false)
+      String authorizationHeader,
       @PathVariable UUID id,
       @RequestBody CreateMessageRequest req) {
     AuthenticatedUser actor = authService.requireAuthenticatedUser(authorizationHeader);
@@ -90,7 +96,10 @@ public class MessageController {
 
   @DeleteMapping("/{id}")
   public ResponseEntity<Void> delete(
-      @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+      @RequestHeader(
+          value = HttpHeaders.AUTHORIZATION,
+          required = false)
+      String authorizationHeader,
       @PathVariable UUID id) {
     AuthenticatedUser actor = authService.requireAuthenticatedUser(authorizationHeader);
     Message found = service.findById(id);
@@ -106,7 +115,10 @@ public class MessageController {
 
   @PostMapping("/{parentId}/replies")
   public ResponseEntity<Message> createReply(
-      @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+      @RequestHeader(
+          value = HttpHeaders.AUTHORIZATION,
+          required = false)
+      String authorizationHeader,
       @PathVariable UUID parentId,
       @RequestBody CreateMessageRequest req) {
     AuthenticatedUser actor = authService.requireAuthenticatedUser(authorizationHeader);
@@ -128,7 +140,10 @@ public class MessageController {
 
   @PutMapping("/{parentId}/replies/{replyId}")
   public ResponseEntity<Message> updateReply(
-      @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+      @RequestHeader(
+          value = HttpHeaders.AUTHORIZATION,
+          required = false)
+      String authorizationHeader,
       @PathVariable UUID parentId,
       @PathVariable UUID replyId,
       @RequestBody CreateMessageRequest req) {
@@ -149,7 +164,10 @@ public class MessageController {
 
   @DeleteMapping("/{parentId}/replies/{replyId}")
   public ResponseEntity<Void> deleteReply(
-      @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+      @RequestHeader(
+          value = HttpHeaders.AUTHORIZATION,
+          required = false)
+      String authorizationHeader,
       @PathVariable UUID parentId,
       @PathVariable UUID replyId) {
     AuthenticatedUser actor = authService.requireAuthenticatedUser(authorizationHeader);
