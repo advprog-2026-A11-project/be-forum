@@ -17,7 +17,7 @@ public class MessageService {
   }
 
   @Transactional
-  public Message createMessage(String content, String readingId) {
+  public Message createMessage(String content, String readingId, UUID userId) {
     if (readingId == null || readingId.isBlank()) {
       throw new IllegalArgumentException("readingId is required for thread creation");
     }
@@ -25,6 +25,7 @@ public class MessageService {
     Message message = new Message();
     message.setContent(content);
     message.setReadingId(readingId.trim());
+    message.setUserId(userId);
     return repository.save(message);
   }
 
@@ -61,12 +62,13 @@ public class MessageService {
   }
 
   @Transactional
-  public Message createReply(UUID parentId, String content) {
+  public Message createReply(UUID parentId, String content, UUID userId) {
     return repository.findById(parentId)
         .map(parent -> {
           Message reply = new Message();
           reply.setContent(content);
           reply.setReadingId(parent.getReadingId());
+          reply.setUserId(userId);
           reply.setParent(parent);
           return repository.save(reply);
         })

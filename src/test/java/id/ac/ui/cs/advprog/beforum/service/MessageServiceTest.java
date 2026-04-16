@@ -37,22 +37,26 @@ class MessageServiceTest {
   private Message reply;
   private UUID parentId;
   private UUID replyId;
+  private UUID userId;
 
   @BeforeEach
   void setUp() {
     parentId = UUID.randomUUID();
     replyId = UUID.randomUUID();
+    userId = UUID.randomUUID();
 
     parentMessage = new Message();
     parentMessage.setId(parentId);
     parentMessage.setContent("Parent message content");
     parentMessage.setReadingId("reading-1");
+    parentMessage.setUserId(userId);
     parentMessage.setCreatedAt(OffsetDateTime.now());
 
     reply = new Message();
     reply.setId(replyId);
     reply.setContent("Reply content");
     reply.setReadingId("reading-1");
+    reply.setUserId(userId);
     reply.setCreatedAt(OffsetDateTime.now());
     reply.setParent(parentMessage);
   }
@@ -63,24 +67,29 @@ class MessageServiceTest {
     String readingId = "reading-123";
     when(repository.save(any(Message.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-    Message created = service.createMessage(content, readingId);
+    Message created = service.createMessage(content, readingId, userId);
 
     assertNotNull(created);
     assertEquals(content, created.getContent());
     assertEquals(readingId, created.getReadingId());
+    assertEquals(userId, created.getUserId());
     assertNull(created.getParent());
     verify(repository).save(any(Message.class));
   }
 
   @Test
   void createMessageShouldRejectMissingReadingId() {
-    assertThrows(IllegalArgumentException.class, () -> service.createMessage("New message", " "));
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> service.createMessage("New message", " ", userId));
     verify(repository, never()).save(any(Message.class));
   }
 
   @Test
   void createMessageShouldRejectNullReadingId() {
-    assertThrows(IllegalArgumentException.class, () -> service.createMessage("New message", null));
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> service.createMessage("New message", null, userId));
     verify(repository, never()).save(any(Message.class));
   }
 
@@ -90,13 +99,14 @@ class MessageServiceTest {
     when(repository.findById(parentId)).thenReturn(Optional.of(parentMessage));
     when(repository.save(any(Message.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-    Message createdReply = service.createReply(parentId, replyContent);
+    Message createdReply = service.createReply(parentId, replyContent, userId);
 
     assertNotNull(createdReply);
     assertEquals(replyContent, createdReply.getContent());
     assertEquals(parentMessage, createdReply.getParent());
     assertEquals(parentId, createdReply.getParentId());
     assertEquals(parentMessage.getReadingId(), createdReply.getReadingId());
+    assertEquals(userId, createdReply.getUserId());
     verify(repository).findById(parentId);
     verify(repository).save(any(Message.class));
   }
@@ -106,7 +116,7 @@ class MessageServiceTest {
     UUID nonExistentParentId = UUID.randomUUID();
     when(repository.findById(nonExistentParentId)).thenReturn(Optional.empty());
 
-    Message createdReply = service.createReply(nonExistentParentId, "Reply content");
+    Message createdReply = service.createReply(nonExistentParentId, "Reply content", userId);
 
     assertNull(createdReply);
     verify(repository).findById(nonExistentParentId);
@@ -124,12 +134,13 @@ class MessageServiceTest {
     when(repository.findById(replyId)).thenReturn(Optional.of(reply));
     when(repository.save(any(Message.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-    Message createdNestedReply = service.createReply(replyId, "Nested reply content");
+    Message createdNestedReply = service.createReply(replyId, "Nested reply content", userId);
 
     assertNotNull(createdNestedReply);
     assertEquals(reply, createdNestedReply.getParent());
     assertEquals(replyId, createdNestedReply.getParentId());
     assertEquals(reply.getReadingId(), createdNestedReply.getReadingId());
+    assertEquals(userId, createdNestedReply.getUserId());
   }
 
   @Test
