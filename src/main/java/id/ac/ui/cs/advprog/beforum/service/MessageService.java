@@ -17,15 +17,26 @@ public class MessageService {
   }
 
   @Transactional
-  public Message createMessage(String content) {
+  public Message createMessage(String content, String readingId, UUID userId) {
+    if (readingId == null || readingId.isBlank()) {
+      throw new IllegalArgumentException("readingId is required for thread creation");
+    }
+
     Message message = new Message();
     message.setContent(content);
+    message.setReadingId(readingId.trim());
+    message.setUserId(userId);
     return repository.save(message);
   }
 
   @Transactional(readOnly = true)
-  public List<Message> listMessages() {
-    List<Message> messages = repository.findAll();
+  public List<Message> listMessages(String readingId) {
+    List<Message> messages;
+    if (readingId == null || readingId.isBlank()) {
+      messages = repository.findTopLevelOrderByCreatedAtDesc();
+    } else {
+      messages = repository.findTopLevelByReadingIdOrderByCreatedAtDesc(readingId.trim());
+    }
     messages.forEach(this::loadRepliesRecursively);
     return messages;
   }
@@ -51,11 +62,13 @@ public class MessageService {
   }
 
   @Transactional
-  public Message createReply(UUID parentId, String content) {
+  public Message createReply(UUID parentId, String content, UUID userId) {
     return repository.findById(parentId)
         .map(parent -> {
           Message reply = new Message();
           reply.setContent(content);
+          reply.setReadingId(parent.getReadingId());
+          reply.setUserId(userId);
           reply.setParent(parent);
           return repository.save(reply);
         })

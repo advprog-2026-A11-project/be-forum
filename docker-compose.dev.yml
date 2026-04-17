@@ -23,12 +23,15 @@ services:
       - DB_URL=jdbc:postgresql://db:5432/${POSTGRES_DB}
       - DB_USERNAME=${POSTGRES_USER:-beforum}
       - DB_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - AUTH_BACKEND_URL=${AUTH_BACKEND_URL:-http://172.25.32.1:8081}
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
     ports:
       - "8080:8080"
     depends_on:
       db:
         condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 volumes:
   beforum-db-data:

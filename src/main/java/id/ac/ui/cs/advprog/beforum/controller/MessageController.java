@@ -1,9 +1,13 @@
 package id.ac.ui.cs.advprog.beforum.controller;
 
 import id.ac.ui.cs.advprog.beforum.model.Message;
+import id.ac.ui.cs.advprog.beforum.service.AuthService;
+import id.ac.ui.cs.advprog.beforum.service.AuthService.AuthenticatedUser;
 import id.ac.ui.cs.advprog.beforum.service.MessageService;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,31 +15,50 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping({"/messages", "/api/messages"})
 public class MessageController {
 
   private final MessageService service;
+  private final AuthService authService;
 
-  public MessageController(MessageService service) {
+  public MessageController(MessageService service, AuthService authService) {
     this.service = service;
+    this.authService = authService;
   }
 
-  public static record CreateMessageRequest(String content) {
+  public static record CreateMessageRequest(String content, String readingId) {
   }
 
   @PostMapping
-  public ResponseEntity<Message> create(@RequestBody CreateMessageRequest req) {
-    Message created = service.createMessage(req.content());
-    return ResponseEntity.ok(created);
+  public ResponseEntity<Message> create(
+      @RequestHeader(
+          value = HttpHeaders.AUTHORIZATION,
+          required = false)
+      String authorizationHeader,
+      @RequestBody CreateMessageRequest req) {
+    if (req == null || req.readingId() == null || req.readingId().isBlank()) {
+      return ResponseEntity.badRequest().build();
+    }
+
+    try {
+      AuthenticatedUser actor = authService.requireAuthenticatedUser(authorizationHeader);
+      Message created = service.createMessage(req.content(), req.readingId(), actor.userId());
+      return ResponseEntity.ok(created);
+    } catch (IllegalArgumentException ex) {
+      return ResponseEntity.badRequest().build();
+    }
   }
 
   @GetMapping
-  public ResponseEntity<List<Message>> list() {
-    return ResponseEntity.ok(service.listMessages());
+  public ResponseEntity<List<Message>> list(@RequestParam(required = false) String readingId) {
+    return ResponseEntity.ok(service.listMessages(readingId));
   }
 
   @GetMapping("/{id}")
@@ -48,8 +71,22 @@ public class MessageController {
   }
 
   @PutMapping("/{id}")
-  public ResponseEntity<Message> update(@PathVariable UUID id,
-                                        @RequestBody CreateMessageRequest req) {
+  public ResponseEntity<Message> update(
+      @RequestHeader(
+          value = HttpHeaders.AUTHORIZATION,
+          required = false)
+      String authorizationHeader,
+      @PathVariable UUID id,
+      @RequestBody CreateMessageRequest req) {
+    AuthenticatedUser actor = authService.requireAuthenticatedUser(authorizationHeader);
+    Message found = service.findById(id);
+    if (found == null) {
+      return ResponseEntity.notFound().build();
+    }
+    if (!canEdit(actor, found)) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Forbidden");
+    }
+
     Message updated = service.updateMessage(id, req.content());
     if (updated == null) {
       return ResponseEntity.notFound().build();
@@ -58,10 +95,19 @@ public class MessageController {
   }
 
   @DeleteMapping("/{id}")
-  public ResponseEntity<Void> delete(@PathVariable UUID id) {
+  public ResponseEntity<Void> delete(
+      @RequestHeader(
+          value = HttpHeaders.AUTHORIZATION,
+          required = false)
+      String authorizationHeader,
+      @PathVariable UUID id) {
+    AuthenticatedUser actor = authService.requireAuthenticatedUser(authorizationHeader);
     Message found = service.findById(id);
     if (found == null) {
       return ResponseEntity.notFound().build();
+    }
+    if (!canDelete(actor, found)) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Forbidden");
     }
     service.deleteMessage(id);
     return ResponseEntity.noContent().build();
@@ -69,9 +115,14 @@ public class MessageController {
 
   @PostMapping("/{parentId}/replies")
   public ResponseEntity<Message> createReply(
+      @RequestHeader(
+          value = HttpHeaders.AUTHORIZATION,
+          required = false)
+      String authorizationHeader,
       @PathVariable UUID parentId,
       @RequestBody CreateMessageRequest req) {
-    Message reply = service.createReply(parentId, req.content());
+    AuthenticatedUser actor = authService.requireAuthenticatedUser(authorizationHeader);
+    Message reply = service.createReply(parentId, req.content(), actor.userId());
     if (reply == null) {
       return ResponseEntity.notFound().build();
     }
@@ -89,12 +140,20 @@ public class MessageController {
 
   @PutMapping("/{parentId}/replies/{replyId}")
   public ResponseEntity<Message> updateReply(
+      @RequestHeader(
+          value = HttpHeaders.AUTHORIZATION,
+          required = false)
+      String authorizationHeader,
       @PathVariable UUID parentId,
       @PathVariable UUID replyId,
       @RequestBody CreateMessageRequest req) {
+    AuthenticatedUser actor = authService.requireAuthenticatedUser(authorizationHeader);
     Message reply = service.findById(replyId);
     if (reply == null || reply.getParentId() == null || !reply.getParentId().equals(parentId)) {
       return ResponseEntity.notFound().build();
+    }
+    if (!canEdit(actor, reply)) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Forbidden");
     }
     Message updated = service.updateMessage(replyId, req.content());
     if (updated == null) {
@@ -105,13 +164,29 @@ public class MessageController {
 
   @DeleteMapping("/{parentId}/replies/{replyId}")
   public ResponseEntity<Void> deleteReply(
+      @RequestHeader(
+          value = HttpHeaders.AUTHORIZATION,
+          required = false)
+      String authorizationHeader,
       @PathVariable UUID parentId,
       @PathVariable UUID replyId) {
+    AuthenticatedUser actor = authService.requireAuthenticatedUser(authorizationHeader);
     Message reply = service.findById(replyId);
     if (reply == null || reply.getParentId() == null || !reply.getParentId().equals(parentId)) {
       return ResponseEntity.notFound().build();
     }
+    if (!canDelete(actor, reply)) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Forbidden");
+    }
     service.deleteMessage(replyId);
     return ResponseEntity.noContent().build();
+  }
+
+  private boolean canEdit(AuthenticatedUser actor, Message message) {
+    return message.getUserId() != null && message.getUserId().equals(actor.userId());
+  }
+
+  private boolean canDelete(AuthenticatedUser actor, Message message) {
+    return actor.isAdmin() || canEdit(actor, message);
   }
 }

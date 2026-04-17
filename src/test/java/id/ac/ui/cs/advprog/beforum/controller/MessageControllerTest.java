@@ -2,6 +2,7 @@ package id.ac.ui.cs.advprog.beforum.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -13,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import id.ac.ui.cs.advprog.beforum.model.Message;
+import id.ac.ui.cs.advprog.beforum.service.AuthService;
 import id.ac.ui.cs.advprog.beforum.service.MessageService;
 import java.time.OffsetDateTime;
 import java.util.Arrays;
@@ -35,6 +37,9 @@ class MessageControllerTest {
   @MockBean
   private MessageService service;
 
+  @MockBean
+  private AuthService authService;
+
   @Autowired
   private ObjectMapper objectMapper;
 
@@ -42,27 +47,36 @@ class MessageControllerTest {
   private Message reply;
   private UUID parentId;
   private UUID replyId;
+  private UUID authUserId;
 
   @BeforeEach
   void setUp() {
     parentId = UUID.randomUUID();
     replyId = UUID.randomUUID();
+    authUserId = UUID.randomUUID();
+
+    when(authService.requireAuthenticatedUser(any()))
+        .thenReturn(new AuthService.AuthenticatedUser(authUserId, "STUDENT"));
 
     parentMessage = new Message();
     parentMessage.setId(parentId);
     parentMessage.setContent("Parent message content");
+    parentMessage.setReadingId("reading-1");
+    parentMessage.setUserId(authUserId);
     parentMessage.setCreatedAt(OffsetDateTime.now());
 
     reply = new Message();
     reply.setId(replyId);
     reply.setContent("Reply content");
+    reply.setReadingId("reading-1");
+    reply.setUserId(authUserId);
     reply.setCreatedAt(OffsetDateTime.now());
     reply.setParent(parentMessage);
   }
 
   @Test
   void createReplyShouldReturnCreatedReply() throws Exception {
-    when(service.createReply(eq(parentId), eq("Reply content"))).thenReturn(reply);
+    when(service.createReply(eq(parentId), eq("Reply content"), eq(authUserId))).thenReturn(reply);
 
     mockMvc.perform(post("/messages/{parentId}/replies", parentId)
             .contentType(MediaType.APPLICATION_JSON)
@@ -72,12 +86,12 @@ class MessageControllerTest {
         .andExpect(jsonPath("$.content").value("Reply content"))
         .andExpect(jsonPath("$.parentId").value(parentId.toString()));
 
-    verify(service).createReply(parentId, "Reply content");
+    verify(service).createReply(parentId, "Reply content", authUserId);
   }
 
   @Test
   void createReplyShouldReturn404WhenParentNotFound() throws Exception {
-    when(service.createReply(eq(parentId), any())).thenReturn(null);
+    when(service.createReply(eq(parentId), any(), eq(authUserId))).thenReturn(null);
 
     mockMvc.perform(post("/messages/{parentId}/replies", parentId)
             .contentType(MediaType.APPLICATION_JSON)
@@ -205,9 +219,11 @@ class MessageControllerTest {
     Message nestedReply = new Message();
     nestedReply.setId(UUID.randomUUID());
     nestedReply.setContent("Nested reply content");
+    nestedReply.setReadingId("reading-1");
     nestedReply.setParent(reply);
 
-    when(service.createReply(eq(replyId), eq("Nested reply content"))).thenReturn(nestedReply);
+    when(service.createReply(eq(replyId), eq("Nested reply content"), eq(authUserId)))
+        .thenReturn(nestedReply);
 
     mockMvc.perform(post("/messages/{parentId}/replies", replyId)
             .contentType(MediaType.APPLICATION_JSON)
@@ -222,28 +238,69 @@ class MessageControllerTest {
     Message newMessage = new Message();
     newMessage.setId(UUID.randomUUID());
     newMessage.setContent("New message");
+    newMessage.setReadingId("reading-1");
 
-    when(service.createMessage("New message")).thenReturn(newMessage);
+    when(service.createMessage("New message", "reading-1", authUserId)).thenReturn(newMessage);
 
     mockMvc.perform(post("/messages")
             .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"content\": \"New message\"}"))
+            .content("{\"content\": \"New message\", \"readingId\": \"reading-1\"}"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.content").value("New message"));
+        .andExpect(jsonPath("$.content").value("New message"))
+        .andExpect(jsonPath("$.readingId").value("reading-1"));
 
-    verify(service).createMessage("New message");
+    verify(service).createMessage("New message", "reading-1", authUserId);
+  }
+
+  @Test
+  void createShouldReturnBadRequestWhenReadingIdMissing() throws Exception {
+    mockMvc.perform(post("/messages")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"content\": \"New message\"}"))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void createShouldReturnBadRequestWhenReadingIdBlank() throws Exception {
+    mockMvc.perform(post("/messages")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"content\": \"New message\", \"readingId\": \"   \"}"))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void createShouldReturnBadRequestWhenServiceThrowsIllegalArgumentException() throws Exception {
+    when(service.createMessage("New message", "reading-1", authUserId))
+        .thenThrow(new IllegalArgumentException("readingId is required for thread creation"));
+
+    mockMvc.perform(post("/messages")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"content\": \"New message\", \"readingId\": \"reading-1\"}"))
+        .andExpect(status().isBadRequest());
   }
 
   @Test
   void listShouldReturnAllMessages() throws Exception {
     List<Message> messages = Arrays.asList(parentMessage, reply);
-    when(service.listMessages()).thenReturn(messages);
+    when(service.listMessages(null)).thenReturn(messages);
 
     mockMvc.perform(get("/messages"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.length()").value(2));
 
-    verify(service).listMessages();
+    verify(service).listMessages(null);
+  }
+
+  @Test
+  void listShouldFilterByReadingId() throws Exception {
+    when(service.listMessages("reading-1")).thenReturn(List.of(parentMessage));
+
+    mockMvc.perform(get("/messages").param("readingId", "reading-1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(1))
+        .andExpect(jsonPath("$[0].readingId").value("reading-1"));
+
+    verify(service).listMessages("reading-1");
   }
 
   @Test
@@ -253,6 +310,7 @@ class MessageControllerTest {
     updated.setId(parentId);
     updated.setContent(newContent);
 
+    when(service.findById(parentId)).thenReturn(parentMessage);
     when(service.updateMessage(eq(parentId), eq(newContent))).thenReturn(updated);
 
     mockMvc.perform(put("/messages/{id}", parentId)
@@ -266,7 +324,7 @@ class MessageControllerTest {
 
   @Test
   void updateShouldReturn404WhenNotFound() throws Exception {
-    when(service.updateMessage(eq(parentId), any())).thenReturn(null);
+    when(service.findById(parentId)).thenReturn(null);
 
     mockMvc.perform(put("/messages/{id}", parentId)
             .contentType(MediaType.APPLICATION_JSON)
@@ -327,5 +385,73 @@ class MessageControllerTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"content\": \"Updated content\"}"))
         .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void updateShouldReturn403WhenStudentEditsAnotherUserMessage() throws Exception {
+    Message otherUserMessage = new Message();
+    otherUserMessage.setId(parentId);
+    otherUserMessage.setUserId(UUID.randomUUID());
+
+    when(service.findById(parentId)).thenReturn(otherUserMessage);
+    when(authService.requireAuthenticatedUser(any()))
+        .thenReturn(new AuthService.AuthenticatedUser(authUserId, "STUDENT"));
+
+    mockMvc.perform(put("/messages/{id}", parentId)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"content\": \"Updated content\"}"))
+        .andExpect(status().isForbidden());
+
+    verify(service, never()).updateMessage(eq(parentId), any());
+  }
+
+  @Test
+  void updateShouldReturn403WhenAdminEditsAnotherUserMessage() throws Exception {
+    Message otherUserMessage = new Message();
+    otherUserMessage.setId(parentId);
+    otherUserMessage.setUserId(UUID.randomUUID());
+
+    when(service.findById(parentId)).thenReturn(otherUserMessage);
+    when(authService.requireAuthenticatedUser(any()))
+        .thenReturn(new AuthService.AuthenticatedUser(authUserId, "ADMIN"));
+
+    mockMvc.perform(put("/messages/{id}", parentId)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"content\": \"Updated content\"}"))
+        .andExpect(status().isForbidden());
+
+    verify(service, never()).updateMessage(eq(parentId), any());
+  }
+
+  @Test
+  void deleteShouldAllowAdminToDeleteAnotherUserMessage() throws Exception {
+    Message otherUserMessage = new Message();
+    otherUserMessage.setId(parentId);
+    otherUserMessage.setUserId(UUID.randomUUID());
+
+    when(service.findById(parentId)).thenReturn(otherUserMessage);
+    when(authService.requireAuthenticatedUser(any()))
+        .thenReturn(new AuthService.AuthenticatedUser(authUserId, "ADMIN"));
+
+    mockMvc.perform(delete("/messages/{id}", parentId))
+        .andExpect(status().isNoContent());
+
+    verify(service).deleteMessage(parentId);
+  }
+
+  @Test
+  void deleteShouldReturn403WhenStudentDeletesAnotherUserMessage() throws Exception {
+    Message otherUserMessage = new Message();
+    otherUserMessage.setId(parentId);
+    otherUserMessage.setUserId(UUID.randomUUID());
+
+    when(service.findById(parentId)).thenReturn(otherUserMessage);
+    when(authService.requireAuthenticatedUser(any()))
+        .thenReturn(new AuthService.AuthenticatedUser(authUserId, "STUDENT"));
+
+    mockMvc.perform(delete("/messages/{id}", parentId))
+        .andExpect(status().isForbidden());
+
+    verify(service, never()).deleteMessage(parentId);
   }
 }

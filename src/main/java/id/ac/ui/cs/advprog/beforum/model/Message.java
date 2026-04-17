@@ -39,6 +39,12 @@ public class Message {
   @Column(name = "created_at", nullable = false, columnDefinition = "TIMESTAMP WITH TIME ZONE")
   private OffsetDateTime createdAt = OffsetDateTime.now();
 
+  @Column(name = "reading_id")
+  private String readingId;
+
+  @Column(name = "user_id")
+  private UUID userId;
+
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "parent_id")
   @JsonBackReference

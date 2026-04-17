@@ -3,6 +3,7 @@ package id.ac.ui.cs.advprog.beforum.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -36,20 +37,26 @@ class MessageServiceTest {
   private Message reply;
   private UUID parentId;
   private UUID replyId;
+  private UUID userId;
 
   @BeforeEach
   void setUp() {
     parentId = UUID.randomUUID();
     replyId = UUID.randomUUID();
+    userId = UUID.randomUUID();
 
     parentMessage = new Message();
     parentMessage.setId(parentId);
     parentMessage.setContent("Parent message content");
+    parentMessage.setReadingId("reading-1");
+    parentMessage.setUserId(userId);
     parentMessage.setCreatedAt(OffsetDateTime.now());
 
     reply = new Message();
     reply.setId(replyId);
     reply.setContent("Reply content");
+    reply.setReadingId("reading-1");
+    reply.setUserId(userId);
     reply.setCreatedAt(OffsetDateTime.now());
     reply.setParent(parentMessage);
   }
@@ -57,14 +64,33 @@ class MessageServiceTest {
   @Test
   void createMessageShouldCreateMessage() {
     String content = "New message";
+    String readingId = "reading-123";
     when(repository.save(any(Message.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-    Message created = service.createMessage(content);
+    Message created = service.createMessage(content, readingId, userId);
 
     assertNotNull(created);
     assertEquals(content, created.getContent());
+    assertEquals(readingId, created.getReadingId());
+    assertEquals(userId, created.getUserId());
     assertNull(created.getParent());
     verify(repository).save(any(Message.class));
+  }
+
+  @Test
+  void createMessageShouldRejectMissingReadingId() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> service.createMessage("New message", " ", userId));
+    verify(repository, never()).save(any(Message.class));
+  }
+
+  @Test
+  void createMessageShouldRejectNullReadingId() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> service.createMessage("New message", null, userId));
+    verify(repository, never()).save(any(Message.class));
   }
 
   @Test
@@ -73,12 +99,14 @@ class MessageServiceTest {
     when(repository.findById(parentId)).thenReturn(Optional.of(parentMessage));
     when(repository.save(any(Message.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-    Message createdReply = service.createReply(parentId, replyContent);
+    Message createdReply = service.createReply(parentId, replyContent, userId);
 
     assertNotNull(createdReply);
     assertEquals(replyContent, createdReply.getContent());
     assertEquals(parentMessage, createdReply.getParent());
     assertEquals(parentId, createdReply.getParentId());
+    assertEquals(parentMessage.getReadingId(), createdReply.getReadingId());
+    assertEquals(userId, createdReply.getUserId());
     verify(repository).findById(parentId);
     verify(repository).save(any(Message.class));
   }
@@ -88,7 +116,7 @@ class MessageServiceTest {
     UUID nonExistentParentId = UUID.randomUUID();
     when(repository.findById(nonExistentParentId)).thenReturn(Optional.empty());
 
-    Message createdReply = service.createReply(nonExistentParentId, "Reply content");
+    Message createdReply = service.createReply(nonExistentParentId, "Reply content", userId);
 
     assertNull(createdReply);
     verify(repository).findById(nonExistentParentId);
@@ -106,11 +134,13 @@ class MessageServiceTest {
     when(repository.findById(replyId)).thenReturn(Optional.of(reply));
     when(repository.save(any(Message.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-    Message createdNestedReply = service.createReply(replyId, "Nested reply content");
+    Message createdNestedReply = service.createReply(replyId, "Nested reply content", userId);
 
     assertNotNull(createdNestedReply);
     assertEquals(reply, createdNestedReply.getParent());
     assertEquals(replyId, createdNestedReply.getParentId());
+    assertEquals(reply.getReadingId(), createdNestedReply.getReadingId());
+    assertEquals(userId, createdNestedReply.getUserId());
   }
 
   @Test
@@ -118,6 +148,7 @@ class MessageServiceTest {
     Message reply2 = new Message();
     reply2.setId(UUID.randomUUID());
     reply2.setContent("Second reply");
+    reply2.setReadingId("reading-1");
     reply2.setParent(parentMessage);
 
     List<Message> replies = Arrays.asList(reply, reply2);
@@ -196,18 +227,52 @@ class MessageServiceTest {
     Message msg1 = new Message();
     msg1.setId(UUID.randomUUID());
     msg1.setContent("Message 1");
+    msg1.setReadingId("reading-1");
 
     Message msg2 = new Message();
     msg2.setId(UUID.randomUUID());
     msg2.setContent("Message 2");
+    msg2.setReadingId("reading-2");
 
     List<Message> messages = Arrays.asList(msg1, msg2);
-    when(repository.findAll()).thenReturn(messages);
+    when(repository.findTopLevelOrderByCreatedAtDesc()).thenReturn(messages);
 
-    List<Message> result = service.listMessages();
+    List<Message> result = service.listMessages(null);
 
     assertEquals(2, result.size());
-    verify(repository).findAll();
+    verify(repository).findTopLevelOrderByCreatedAtDesc();
+  }
+
+  @Test
+  void listMessagesShouldFilterByReadingId() {
+    Message msg = new Message();
+    msg.setId(UUID.randomUUID());
+    msg.setContent("Message 1");
+    msg.setReadingId("reading-1");
+
+    when(repository.findTopLevelByReadingIdOrderByCreatedAtDesc("reading-1"))
+        .thenReturn(List.of(msg));
+
+    List<Message> result = service.listMessages("reading-1");
+
+    assertEquals(1, result.size());
+    assertEquals("reading-1", result.get(0).getReadingId());
+    verify(repository).findTopLevelByReadingIdOrderByCreatedAtDesc("reading-1");
+  }
+
+  @Test
+  void listMessagesShouldTreatBlankReadingIdAsUnfiltered() {
+    Message msg = new Message();
+    msg.setId(UUID.randomUUID());
+    msg.setContent("Message 1");
+    msg.setReadingId("reading-1");
+
+    when(repository.findTopLevelOrderByCreatedAtDesc()).thenReturn(List.of(msg));
+
+    List<Message> result = service.listMessages("   ");
+
+    assertEquals(1, result.size());
+    verify(repository).findTopLevelOrderByCreatedAtDesc();
   }
 
   @Test
