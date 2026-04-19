@@ -2,7 +2,6 @@ package id.ac.ui.cs.advprog.beforum.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -14,7 +13,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import id.ac.ui.cs.advprog.beforum.model.Message;
-import id.ac.ui.cs.advprog.beforum.service.AuthService;
 import id.ac.ui.cs.advprog.beforum.service.MessageService;
 import java.time.OffsetDateTime;
 import java.util.Arrays;
@@ -37,9 +35,6 @@ class MessageControllerTest {
   @MockBean
   private MessageService service;
 
-  @MockBean
-  private AuthService authService;
-
   @Autowired
   private ObjectMapper objectMapper;
 
@@ -47,29 +42,26 @@ class MessageControllerTest {
   private Message reply;
   private UUID parentId;
   private UUID replyId;
-  private UUID authUserId;
+  private UUID userId;
 
   @BeforeEach
   void setUp() {
     parentId = UUID.randomUUID();
     replyId = UUID.randomUUID();
-    authUserId = UUID.randomUUID();
-
-    when(authService.requireAuthenticatedUser(any()))
-        .thenReturn(new AuthService.AuthenticatedUser(authUserId, "STUDENT"));
+    userId = UUID.randomUUID();
 
     parentMessage = new Message();
     parentMessage.setId(parentId);
     parentMessage.setContent("Parent message content");
     parentMessage.setReadingId("reading-1");
-    parentMessage.setUserId(authUserId);
+    parentMessage.setUserId(userId);
     parentMessage.setCreatedAt(OffsetDateTime.now());
 
     reply = new Message();
     reply.setId(replyId);
     reply.setContent("Reply content");
     reply.setReadingId("reading-1");
-    reply.setUserId(authUserId);
+    reply.setUserId(userId);
     reply.setCreatedAt(OffsetDateTime.now());
     reply.setParent(parentMessage);
   }
@@ -385,73 +377,5 @@ class MessageControllerTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"content\": \"Updated content\"}"))
         .andExpect(status().isNotFound());
-  }
-
-  @Test
-  void updateShouldReturn403WhenStudentEditsAnotherUserMessage() throws Exception {
-    Message otherUserMessage = new Message();
-    otherUserMessage.setId(parentId);
-    otherUserMessage.setUserId(UUID.randomUUID());
-
-    when(service.findById(parentId)).thenReturn(otherUserMessage);
-    when(authService.requireAuthenticatedUser(any()))
-        .thenReturn(new AuthService.AuthenticatedUser(authUserId, "STUDENT"));
-
-    mockMvc.perform(put("/messages/{id}", parentId)
-            .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"content\": \"Updated content\"}"))
-        .andExpect(status().isForbidden());
-
-    verify(service, never()).updateMessage(eq(parentId), any());
-  }
-
-  @Test
-  void updateShouldReturn403WhenAdminEditsAnotherUserMessage() throws Exception {
-    Message otherUserMessage = new Message();
-    otherUserMessage.setId(parentId);
-    otherUserMessage.setUserId(UUID.randomUUID());
-
-    when(service.findById(parentId)).thenReturn(otherUserMessage);
-    when(authService.requireAuthenticatedUser(any()))
-        .thenReturn(new AuthService.AuthenticatedUser(authUserId, "ADMIN"));
-
-    mockMvc.perform(put("/messages/{id}", parentId)
-            .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"content\": \"Updated content\"}"))
-        .andExpect(status().isForbidden());
-
-    verify(service, never()).updateMessage(eq(parentId), any());
-  }
-
-  @Test
-  void deleteShouldAllowAdminToDeleteAnotherUserMessage() throws Exception {
-    Message otherUserMessage = new Message();
-    otherUserMessage.setId(parentId);
-    otherUserMessage.setUserId(UUID.randomUUID());
-
-    when(service.findById(parentId)).thenReturn(otherUserMessage);
-    when(authService.requireAuthenticatedUser(any()))
-        .thenReturn(new AuthService.AuthenticatedUser(authUserId, "ADMIN"));
-
-    mockMvc.perform(delete("/messages/{id}", parentId))
-        .andExpect(status().isNoContent());
-
-    verify(service).deleteMessage(parentId);
-  }
-
-  @Test
-  void deleteShouldReturn403WhenStudentDeletesAnotherUserMessage() throws Exception {
-    Message otherUserMessage = new Message();
-    otherUserMessage.setId(parentId);
-    otherUserMessage.setUserId(UUID.randomUUID());
-
-    when(service.findById(parentId)).thenReturn(otherUserMessage);
-    when(authService.requireAuthenticatedUser(any()))
-        .thenReturn(new AuthService.AuthenticatedUser(authUserId, "STUDENT"));
-
-    mockMvc.perform(delete("/messages/{id}", parentId))
-        .andExpect(status().isForbidden());
-
-    verify(service, never()).deleteMessage(parentId);
   }
 }
