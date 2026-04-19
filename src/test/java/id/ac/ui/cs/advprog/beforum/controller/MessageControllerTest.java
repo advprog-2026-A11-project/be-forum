@@ -68,7 +68,7 @@ class MessageControllerTest {
 
   @Test
   void createReplyShouldReturnCreatedReply() throws Exception {
-    when(service.createReply(eq(parentId), eq("Reply content"), eq(authUserId))).thenReturn(reply);
+    when(service.createReply(eq(parentId), eq("Reply content"), eq(userId))).thenReturn(reply);
 
     mockMvc.perform(post("/messages/{parentId}/replies", parentId)
             .contentType(MediaType.APPLICATION_JSON)
@@ -78,12 +78,12 @@ class MessageControllerTest {
         .andExpect(jsonPath("$.content").value("Reply content"))
         .andExpect(jsonPath("$.parentId").value(parentId.toString()));
 
-    verify(service).createReply(parentId, "Reply content", authUserId);
+    verify(service).createReply(parentId, "Reply content", userId);
   }
 
   @Test
   void createReplyShouldReturn404WhenParentNotFound() throws Exception {
-    when(service.createReply(eq(parentId), any(), eq(authUserId))).thenReturn(null);
+    when(service.createReply(eq(parentId), any(), eq(userId))).thenReturn(null);
 
     mockMvc.perform(post("/messages/{parentId}/replies", parentId)
             .contentType(MediaType.APPLICATION_JSON)
@@ -214,7 +214,7 @@ class MessageControllerTest {
     nestedReply.setReadingId("reading-1");
     nestedReply.setParent(reply);
 
-    when(service.createReply(eq(replyId), eq("Nested reply content"), eq(authUserId)))
+    when(service.createReply(eq(replyId), eq("Nested reply content"), eq(userId)))
         .thenReturn(nestedReply);
 
     mockMvc.perform(post("/messages/{parentId}/replies", replyId)
@@ -232,7 +232,7 @@ class MessageControllerTest {
     newMessage.setContent("New message");
     newMessage.setReadingId("reading-1");
 
-    when(service.createMessage("New message", "reading-1", authUserId)).thenReturn(newMessage);
+    when(service.createMessage("New message", "reading-1", userId)).thenReturn(newMessage);
 
     mockMvc.perform(post("/messages")
             .contentType(MediaType.APPLICATION_JSON)
@@ -241,7 +241,7 @@ class MessageControllerTest {
         .andExpect(jsonPath("$.content").value("New message"))
         .andExpect(jsonPath("$.readingId").value("reading-1"));
 
-    verify(service).createMessage("New message", "reading-1", authUserId);
+    verify(service).createMessage("New message", "reading-1", userId);
   }
 
   @Test
@@ -262,7 +262,7 @@ class MessageControllerTest {
 
   @Test
   void createShouldReturnBadRequestWhenServiceThrowsIllegalArgumentException() throws Exception {
-    when(service.createMessage("New message", "reading-1", authUserId))
+    when(service.createMessage("New message", "reading-1", userId))
         .thenThrow(new IllegalArgumentException("readingId is required for thread creation"));
 
     mockMvc.perform(post("/messages")
