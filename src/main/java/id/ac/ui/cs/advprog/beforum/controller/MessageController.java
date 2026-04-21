@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping({"/messages", "/api/messages"})
+@RequestMapping("/api/messages")
 public class MessageController {
 
   private final MessageService service;

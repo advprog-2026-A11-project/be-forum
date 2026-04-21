@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping({"/messages/{messageId}/reactions", "/api/messages/{messageId}/reactions"})
+@RequestMapping("/api/messages/{messageId}/reactions")
 public class ReactionController {
 
   private final ReactionService service;

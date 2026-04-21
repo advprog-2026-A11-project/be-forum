@@ -88,7 +88,7 @@ class ReactionControllerTest {
         eq(ReactionType.UPVOTE)
     )).thenReturn(reaction);
 
-    mockMvc.perform(post("/messages/{messageId}/reactions", messageId)
+    mockMvc.perform(post("/api/messages/{messageId}/reactions", messageId)
             .with(authenticatedJwt())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"reactionType\": \"UPVOTE\"}"))
@@ -104,7 +104,7 @@ class ReactionControllerTest {
   void addReactionShouldReturn404WhenMessageNotFound() throws Exception {
     when(service.addReaction(eq(messageId), any(), any())).thenReturn(null);
 
-    mockMvc.perform(post("/messages/{messageId}/reactions", messageId)
+    mockMvc.perform(post("/api/messages/{messageId}/reactions", messageId)
             .with(authenticatedJwt())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"reactionType\": \"UPVOTE\"}"))
@@ -116,7 +116,7 @@ class ReactionControllerTest {
     when(service.addReaction(eq(messageId), eq(userId), eq(ReactionType.UPVOTE)))
         .thenThrow(new IllegalStateException("User has already given this reaction"));
 
-    mockMvc.perform(post("/messages/{messageId}/reactions", messageId)
+    mockMvc.perform(post("/api/messages/{messageId}/reactions", messageId)
             .with(authenticatedJwt())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"reactionType\": \"UPVOTE\"}"))
@@ -125,7 +125,7 @@ class ReactionControllerTest {
 
   @Test
   void addReactionShouldReturn401WhenJwtMissing() throws Exception {
-    mockMvc.perform(post("/messages/{messageId}/reactions", messageId)
+    mockMvc.perform(post("/api/messages/{messageId}/reactions", messageId)
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"reactionType\": \"UPVOTE\"}"))
         .andExpect(status().isUnauthorized());
@@ -135,7 +135,7 @@ class ReactionControllerTest {
 
   @Test
   void addReactionShouldReturn401WhenJwtSubjectBlank() throws Exception {
-    mockMvc.perform(post("/messages/{messageId}/reactions", messageId)
+    mockMvc.perform(post("/api/messages/{messageId}/reactions", messageId)
             .with(jwt().jwt(token -> token.subject("   ")))
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"reactionType\": \"UPVOTE\"}"))
@@ -146,7 +146,7 @@ class ReactionControllerTest {
 
   @Test
   void addReactionShouldReturn401WhenJwtSubjectMissing() throws Exception {
-    mockMvc.perform(post("/messages/{messageId}/reactions", messageId)
+    mockMvc.perform(post("/api/messages/{messageId}/reactions", messageId)
             .with(jwt().jwt(token -> token.claims(claims -> claims.remove("sub"))))
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"reactionType\": \"UPVOTE\"}"))
@@ -164,7 +164,7 @@ class ReactionControllerTest {
         eq(ReactionType.FIRE)
     )).thenReturn(reaction);
 
-    mockMvc.perform(post("/messages/{messageId}/reactions", messageId)
+    mockMvc.perform(post("/api/messages/{messageId}/reactions", messageId)
             .with(authenticatedJwt())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"reactionType\": \"FIRE\"}"))
@@ -182,7 +182,7 @@ class ReactionControllerTest {
         eq(ReactionType.UPVOTE)
     )).thenReturn(true);
 
-    mockMvc.perform(delete("/messages/{messageId}/reactions", messageId)
+    mockMvc.perform(delete("/api/messages/{messageId}/reactions", messageId)
             .with(authenticatedJwt())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"reactionType\": \"UPVOTE\"}"))
@@ -199,7 +199,7 @@ class ReactionControllerTest {
         eq(ReactionType.UPVOTE)
     )).thenReturn(false);
 
-    mockMvc.perform(delete("/messages/{messageId}/reactions", messageId)
+    mockMvc.perform(delete("/api/messages/{messageId}/reactions", messageId)
             .with(authenticatedJwt())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"reactionType\": \"UPVOTE\"}"))
@@ -208,7 +208,7 @@ class ReactionControllerTest {
 
   @Test
   void removeReactionShouldReturn401WhenJwtMissing() throws Exception {
-    mockMvc.perform(delete("/messages/{messageId}/reactions", messageId)
+    mockMvc.perform(delete("/api/messages/{messageId}/reactions", messageId)
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"reactionType\": \"UPVOTE\"}"))
         .andExpect(status().isUnauthorized());
@@ -218,7 +218,7 @@ class ReactionControllerTest {
 
   @Test
   void removeReactionShouldReturn401WhenJwtSubjectBlank() throws Exception {
-    mockMvc.perform(delete("/messages/{messageId}/reactions", messageId)
+    mockMvc.perform(delete("/api/messages/{messageId}/reactions", messageId)
             .with(jwt().jwt(token -> token.subject("   ")))
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"reactionType\": \"UPVOTE\"}"))
@@ -229,7 +229,7 @@ class ReactionControllerTest {
 
   @Test
   void removeReactionShouldReturn401WhenJwtSubjectMissing() throws Exception {
-    mockMvc.perform(delete("/messages/{messageId}/reactions", messageId)
+    mockMvc.perform(delete("/api/messages/{messageId}/reactions", messageId)
             .with(jwt().jwt(token -> token.claims(claims -> claims.remove("sub"))))
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"reactionType\": \"UPVOTE\"}"))
@@ -249,7 +249,7 @@ class ReactionControllerTest {
     List<Reaction> reactions = Arrays.asList(reaction, reaction2);
     when(service.getReactionsByMessageId(messageId)).thenReturn(reactions);
 
-    mockMvc.perform(get("/messages/{messageId}/reactions", messageId))
+    mockMvc.perform(get("/api/messages/{messageId}/reactions", messageId))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.length()").value(2))
         .andExpect(jsonPath("$[0].reactionType").value("UPVOTE"))
@@ -269,7 +269,7 @@ class ReactionControllerTest {
 
     when(service.getReactionCountsByMessageId(messageId)).thenReturn(counts);
 
-    mockMvc.perform(get("/messages/{messageId}/reactions/counts", messageId))
+    mockMvc.perform(get("/api/messages/{messageId}/reactions/counts", messageId))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.UPVOTE").value(5))
         .andExpect(jsonPath("$.DOWNVOTE").value(2))
@@ -283,7 +283,7 @@ class ReactionControllerTest {
     List<Reaction> reactions = Arrays.asList(reaction);
     when(service.getUserReactionsOnMessage(messageId, userId)).thenReturn(reactions);
 
-    mockMvc.perform(get("/messages/{messageId}/reactions/user/{userId}", messageId, userId))
+    mockMvc.perform(get("/api/messages/{messageId}/reactions/user/{userId}", messageId, userId))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.length()").value(1))
         .andExpect(jsonPath("$[0].userId").value(userId))
@@ -305,7 +305,7 @@ class ReactionControllerTest {
           eq(reactionType)
       )).thenReturn(typedReaction);
 
-      mockMvc.perform(post("/messages/{messageId}/reactions", messageId)
+      mockMvc.perform(post("/api/messages/{messageId}/reactions", messageId)
               .with(authenticatedJwt())
               .contentType(MediaType.APPLICATION_JSON)
               .content("{\"reactionType\": \"" + reactionType.name() + "\"}"))

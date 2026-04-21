@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping({"/messages/{parentId}/replies", "/api/messages/{parentId}/replies"})
+@RequestMapping("/api/messages/{parentId}/replies")
 public class MessageReplyController {
 
   private final MessageService service;
