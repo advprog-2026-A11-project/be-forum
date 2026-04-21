@@ -21,6 +21,11 @@ public class SecurityConfig {
             .requestMatchers(HttpMethod.POST, "/messages", "/api/messages").authenticated()
             .requestMatchers(HttpMethod.POST, "/messages/*/replies", "/api/messages/*/replies")
             .authenticated()
+            .requestMatchers(
+                HttpMethod.POST,
+                "/messages/*/reactions",
+                "/api/messages/*/reactions")
+            .authenticated()
             .requestMatchers(HttpMethod.PUT, "/messages/*", "/api/messages/*").authenticated()
             .requestMatchers(
                 HttpMethod.PUT,
@@ -32,6 +37,11 @@ public class SecurityConfig {
                 HttpMethod.DELETE,
                 "/messages/*/replies/*",
                 "/api/messages/*/replies/*")
+            .authenticated()
+            .requestMatchers(
+                HttpMethod.DELETE,
+                "/messages/*/reactions",
+                "/api/messages/*/reactions")
             .authenticated()
             .anyRequest().permitAll())
         .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));

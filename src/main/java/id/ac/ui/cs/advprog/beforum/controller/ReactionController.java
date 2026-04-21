@@ -6,7 +6,10 @@ import id.ac.ui.cs.advprog.beforum.service.ReactionService;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,16 +28,22 @@ public class ReactionController {
     this.service = service;
   }
 
-  public static record ReactionRequest(String userId, ReactionType reactionType) {
+  public static record ReactionRequest(ReactionType reactionType) {
   }
 
   @PostMapping
   public ResponseEntity<Reaction> addReaction(
+      @AuthenticationPrincipal Jwt jwt,
       @PathVariable UUID messageId,
       @RequestBody ReactionRequest req) {
+    String userId = extractUserId(jwt);
+    if (userId == null) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+
     Reaction reaction;
     try {
-      reaction = service.addReaction(messageId, req.userId(), req.reactionType());
+      reaction = service.addReaction(messageId, userId, req.reactionType());
     } catch (IllegalStateException e) {
       return ResponseEntity.status(409).build();
     }
@@ -46,9 +55,15 @@ public class ReactionController {
 
   @DeleteMapping
   public ResponseEntity<Void> removeReaction(
+      @AuthenticationPrincipal Jwt jwt,
       @PathVariable UUID messageId,
       @RequestBody ReactionRequest req) {
-    boolean removed = service.removeReaction(messageId, req.userId(), req.reactionType());
+    String userId = extractUserId(jwt);
+    if (userId == null) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+
+    boolean removed = service.removeReaction(messageId, userId, req.reactionType());
     if (!removed) {
       return ResponseEntity.notFound().build();
     }
@@ -73,5 +88,12 @@ public class ReactionController {
       @PathVariable String userId) {
     List<Reaction> reactions = service.getUserReactionsOnMessage(messageId, userId);
     return ResponseEntity.ok(reactions);
+  }
+
+  private String extractUserId(Jwt jwt) {
+    if (jwt == null || jwt.getSubject() == null || jwt.getSubject().isBlank()) {
+      return null;
+    }
+    return jwt.getSubject();
   }
 }
