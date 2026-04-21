@@ -1,38 +1,38 @@
 package id.ac.ui.cs.advprog.beforum.controller;
 
+import java.time.OffsetDateTime;
+import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import id.ac.ui.cs.advprog.beforum.model.Message;
-import id.ac.ui.cs.advprog.beforum.security.SecurityConfig;
-import id.ac.ui.cs.advprog.beforum.service.MessageService;
-import java.time.OffsetDateTime;
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import org.springframework.test.web.servlet.MockMvc;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 
+import id.ac.ui.cs.advprog.beforum.model.Message;
+import id.ac.ui.cs.advprog.beforum.security.SecurityConfig;
+import id.ac.ui.cs.advprog.beforum.service.MessageService;
 @WebMvcTest(MessageController.class)
 @Import(SecurityConfig.class)
 class MessageControllerTest {
@@ -333,6 +333,24 @@ class MessageControllerTest {
   }
 
   @Test
+  void createShouldReturn401WhenJwtSubjectIsBlank() throws Exception {
+    mockMvc.perform(post("/messages")
+            .with(jwt().jwt(token -> token.subject("   ")))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"content\": \"New message\", \"readingId\": \"reading-1\"}"))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void createShouldReturn401WhenJwtSubjectMissing() throws Exception {
+    mockMvc.perform(post("/messages")
+            .with(jwt().jwt(token -> token.claims(claims -> claims.remove("sub"))))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"content\": \"New message\", \"readingId\": \"reading-1\"}"))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
   void createShouldReturn401WhenJwtMissing() throws Exception {
     mockMvc.perform(post("/messages")
             .contentType(MediaType.APPLICATION_JSON)
@@ -420,6 +438,33 @@ class MessageControllerTest {
   }
 
   @Test
+  void updateShouldReturn403WhenOwnerIsNull() throws Exception {
+    Message ownerless = new Message();
+    ownerless.setId(parentId);
+    when(service.findById(parentId)).thenReturn(ownerless);
+
+    mockMvc.perform(put("/messages/{id}", parentId)
+            .with(authenticatedJwt())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"content\": \"Updated content\"}"))
+        .andExpect(status().isForbidden());
+
+    verify(service, never()).updateMessage(any(UUID.class), any(String.class));
+  }
+
+  @Test
+  void updateShouldReturn404WhenUpdateReturnsNull() throws Exception {
+    when(service.findById(parentId)).thenReturn(parentMessage);
+    when(service.updateMessage(eq(parentId), eq("Updated content"))).thenReturn(null);
+
+    mockMvc.perform(put("/messages/{id}", parentId)
+            .with(authenticatedJwt())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"content\": \"Updated content\"}"))
+        .andExpect(status().isNotFound());
+  }
+
+  @Test
   void deleteShouldReturn204() throws Exception {
     when(service.findById(parentId)).thenReturn(parentMessage);
 
@@ -437,6 +482,33 @@ class MessageControllerTest {
     mockMvc.perform(delete("/messages/{id}", parentId)
             .with(authenticatedJwt()))
         .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void deleteShouldReturn403WhenUserIsNotOwner() throws Exception {
+    Message ownedByAnotherUser = new Message();
+    ownedByAnotherUser.setId(parentId);
+    ownedByAnotherUser.setUserId(UUID.randomUUID());
+    when(service.findById(parentId)).thenReturn(ownedByAnotherUser);
+
+    mockMvc.perform(delete("/messages/{id}", parentId)
+            .with(authenticatedJwt()))
+        .andExpect(status().isForbidden());
+
+    verify(service, never()).deleteMessage(any(UUID.class));
+  }
+
+  @Test
+  void deleteShouldReturn403WhenOwnerIsNull() throws Exception {
+    Message ownerless = new Message();
+    ownerless.setId(parentId);
+    when(service.findById(parentId)).thenReturn(ownerless);
+
+    mockMvc.perform(delete("/messages/{id}", parentId)
+            .with(authenticatedJwt()))
+        .andExpect(status().isForbidden());
+
+    verify(service, never()).deleteMessage(any(UUID.class));
   }
 
   @Test
@@ -483,6 +555,22 @@ class MessageControllerTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"content\": \"Updated content\"}"))
         .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void updateReplyShouldReturn403WhenOwnerIsNull() throws Exception {
+    Message ownerlessReply = new Message();
+    ownerlessReply.setId(replyId);
+    ownerlessReply.setParent(parentMessage);
+    when(service.findById(replyId)).thenReturn(ownerlessReply);
+
+    mockMvc.perform(put("/messages/{parentId}/replies/{replyId}", parentId, replyId)
+            .with(authenticatedJwt())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"content\": \"Updated content\"}"))
+        .andExpect(status().isForbidden());
+
+    verify(service, never()).updateMessage(any(UUID.class), any(String.class));
   }
 
   @Test
