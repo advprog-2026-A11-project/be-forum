@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import id.ac.ui.cs.advprog.beforum.security.SecurityConfig;
 import id.ac.ui.cs.advprog.beforum.model.Message;
 import id.ac.ui.cs.advprog.beforum.model.Reaction;
 import id.ac.ui.cs.advprog.beforum.model.ReactionType;
@@ -26,15 +27,16 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 @WebMvcTest(ReactionController.class)
-@AutoConfigureMockMvc(addFilters = false)
+@Import(SecurityConfig.class)
 class ReactionControllerTest {
 
   @Autowired
@@ -42,6 +44,9 @@ class ReactionControllerTest {
 
   @MockBean
   private ReactionService service;
+
+  @MockBean
+  private JwtDecoder jwtDecoder;
 
   @Autowired
   private ObjectMapper objectMapper;

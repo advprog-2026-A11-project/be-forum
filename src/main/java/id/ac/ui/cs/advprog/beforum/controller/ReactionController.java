@@ -1,5 +1,7 @@
 package id.ac.ui.cs.advprog.beforum.controller;
 
+import id.ac.ui.cs.advprog.beforum.dto.ReactionRequest;
+import id.ac.ui.cs.advprog.beforum.dto.ReactionResponse;
 import id.ac.ui.cs.advprog.beforum.model.Reaction;
 import id.ac.ui.cs.advprog.beforum.model.ReactionType;
 import id.ac.ui.cs.advprog.beforum.service.ReactionService;
@@ -28,11 +30,8 @@ public class ReactionController {
     this.service = service;
   }
 
-  public static record ReactionRequest(ReactionType reactionType) {
-  }
-
   @PostMapping
-  public ResponseEntity<Reaction> addReaction(
+  public ResponseEntity<ReactionResponse> addReaction(
       @AuthenticationPrincipal Jwt jwt,
       @PathVariable UUID messageId,
       @RequestBody ReactionRequest req) {
@@ -50,7 +49,7 @@ public class ReactionController {
     if (reaction == null) {
       return ResponseEntity.notFound().build();
     }
-    return ResponseEntity.ok(reaction);
+    return ResponseEntity.ok(toResponse(reaction));
   }
 
   @DeleteMapping
@@ -71,9 +70,9 @@ public class ReactionController {
   }
 
   @GetMapping
-  public ResponseEntity<List<Reaction>> getReactions(@PathVariable UUID messageId) {
+  public ResponseEntity<List<ReactionResponse>> getReactions(@PathVariable UUID messageId) {
     List<Reaction> reactions = service.getReactionsByMessageId(messageId);
-    return ResponseEntity.ok(reactions);
+    return ResponseEntity.ok(reactions.stream().map(this::toResponse).toList());
   }
 
   @GetMapping("/counts")
@@ -83,11 +82,11 @@ public class ReactionController {
   }
 
   @GetMapping("/user/{userId}")
-  public ResponseEntity<List<Reaction>> getUserReactions(
+  public ResponseEntity<List<ReactionResponse>> getUserReactions(
       @PathVariable UUID messageId,
       @PathVariable String userId) {
     List<Reaction> reactions = service.getUserReactionsOnMessage(messageId, userId);
-    return ResponseEntity.ok(reactions);
+    return ResponseEntity.ok(reactions.stream().map(this::toResponse).toList());
   }
 
   private String extractUserId(Jwt jwt) {
@@ -95,5 +94,14 @@ public class ReactionController {
       return null;
     }
     return jwt.getSubject();
+  }
+
+  private ReactionResponse toResponse(Reaction reaction) {
+    return new ReactionResponse(
+        reaction.getId(),
+        reaction.getReactionType(),
+        reaction.getUserId(),
+        reaction.getCreatedAt(),
+        reaction.getMessageId());
   }
 }

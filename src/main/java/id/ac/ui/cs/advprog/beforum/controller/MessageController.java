@@ -1,5 +1,7 @@
 package id.ac.ui.cs.advprog.beforum.controller;
 
+import id.ac.ui.cs.advprog.beforum.dto.CreateMessageRequest;
+import id.ac.ui.cs.advprog.beforum.dto.MessageResponse;
 import id.ac.ui.cs.advprog.beforum.model.Message;
 import id.ac.ui.cs.advprog.beforum.service.MessageService;
 import java.util.List;
@@ -28,11 +30,8 @@ public class MessageController {
     this.service = service;
   }
 
-  public static record CreateMessageRequest(String content, String readingId) {
-  }
-
   @PostMapping
-  public ResponseEntity<Message> create(
+  public ResponseEntity<MessageResponse> create(
       @AuthenticationPrincipal Jwt jwt,
       @RequestBody CreateMessageRequest req) {
     UUID userId = extractUserId(jwt);
@@ -46,28 +45,28 @@ public class MessageController {
 
     try {
       Message created = service.createMessage(req.content(), req.readingId(), userId);
-      return ResponseEntity.ok(created);
+      return ResponseEntity.ok(toResponse(created));
     } catch (IllegalArgumentException ex) {
       return ResponseEntity.badRequest().build();
     }
   }
 
   @GetMapping
-  public ResponseEntity<List<Message>> list(@RequestParam(required = false) String readingId) {
-    return ResponseEntity.ok(service.listMessages(readingId));
+  public ResponseEntity<List<MessageResponse>> list(@RequestParam(required = false) String readingId) {
+    return ResponseEntity.ok(service.listMessages(readingId).stream().map(this::toResponse).toList());
   }
 
   @GetMapping("/{id}")
-  public ResponseEntity<Message> getById(@PathVariable UUID id) {
+  public ResponseEntity<MessageResponse> getById(@PathVariable UUID id) {
     Message message = service.findByIdWithReplies(id);
     if (message == null) {
       return ResponseEntity.notFound().build();
     }
-    return ResponseEntity.ok(message);
+    return ResponseEntity.ok(toResponse(message));
   }
 
   @PutMapping("/{id}")
-  public ResponseEntity<Message> update(
+  public ResponseEntity<MessageResponse> update(
       @AuthenticationPrincipal Jwt jwt,
       @PathVariable UUID id,
       @RequestBody CreateMessageRequest req) {
@@ -88,7 +87,7 @@ public class MessageController {
     if (updated == null) {
       return ResponseEntity.notFound().build();
     }
-    return ResponseEntity.ok(updated);
+    return ResponseEntity.ok(toResponse(updated));
   }
 
   @DeleteMapping("/{id}")
@@ -112,7 +111,7 @@ public class MessageController {
   }
 
   @PostMapping("/{parentId}/replies")
-  public ResponseEntity<Message> createReply(
+  public ResponseEntity<MessageResponse> createReply(
       @AuthenticationPrincipal Jwt jwt,
       @PathVariable UUID parentId,
       @RequestBody CreateMessageRequest req) {
@@ -125,20 +124,20 @@ public class MessageController {
     if (reply == null) {
       return ResponseEntity.notFound().build();
     }
-    return ResponseEntity.ok(reply);
+    return ResponseEntity.ok(toResponse(reply));
   }
 
   @GetMapping("/{parentId}/replies")
-  public ResponseEntity<List<Message>> getReplies(@PathVariable UUID parentId) {
+  public ResponseEntity<List<MessageResponse>> getReplies(@PathVariable UUID parentId) {
     Message parent = service.findById(parentId);
     if (parent == null) {
       return ResponseEntity.notFound().build();
     }
-    return ResponseEntity.ok(service.getReplies(parentId));
+    return ResponseEntity.ok(service.getReplies(parentId).stream().map(this::toResponse).toList());
   }
 
   @PutMapping("/{parentId}/replies/{replyId}")
-  public ResponseEntity<Message> updateReply(
+  public ResponseEntity<MessageResponse> updateReply(
       @AuthenticationPrincipal Jwt jwt,
       @PathVariable UUID parentId,
       @PathVariable UUID replyId,
@@ -160,7 +159,7 @@ public class MessageController {
     if (updated == null) {
       return ResponseEntity.notFound().build();
     }
-    return ResponseEntity.ok(updated);
+    return ResponseEntity.ok(toResponse(updated));
   }
 
   @DeleteMapping("/{parentId}/replies/{replyId}")
@@ -199,5 +198,21 @@ public class MessageController {
 
   private boolean isOwner(Message message, UUID userId) {
     return message.getUserId() != null && message.getUserId().equals(userId);
+  }
+
+  private MessageResponse toResponse(Message message) {
+    List<MessageResponse> replyResponses = null;
+    if (message.getReplies() != null) {
+      replyResponses = message.getReplies().stream().map(this::toResponse).toList();
+    }
+
+    return new MessageResponse(
+        message.getId(),
+        message.getContent(),
+        message.getCreatedAt(),
+        message.getReadingId(),
+        message.getUserId(),
+        message.getParentId(),
+        replyResponses);
   }
 }
