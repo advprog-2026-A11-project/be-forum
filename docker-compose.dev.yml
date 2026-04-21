@@ -24,6 +24,7 @@ services:
       - DB_USERNAME=${POSTGRES_USER:-beforum}
       - DB_PASSWORD=${POSTGRES_PASSWORD:-password}
       - AUTH_BACKEND_URL=${AUTH_BACKEND_URL:-http://localhost:8081}
+      - SUPABASE_URL=${SUPABASE_URL}
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
     ports:
       - "8080:8080"

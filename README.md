@@ -6,6 +6,12 @@ Copy .env.example to .env, then fill in with the appropriate values
 
 Required auth integration env:
 - `AUTH_BACKEND_URL` (example: `http://localhost:8081`)
+- `SUPABASE_URL` (example: `https://<project-ref>.supabase.co`)
+
+Message write operations (`POST`/`PUT`/`DELETE` on `/messages` and `/api/messages`) require
+a Supabase Bearer access token. The backend verifies the token against
+`<SUPABASE_URL>/auth/v1/.well-known/jwks.json`, reads user id from `sub`, stores that id on
+create, and only allows update/delete when the token user matches the message owner.
 
 ```bash
 docker compose up --build -d
