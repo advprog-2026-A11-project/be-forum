@@ -15,7 +15,8 @@ public class SecurityConfig {
   public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
     http
         .csrf(csrf -> csrf.ignoringRequestMatchers("/messages/**", "/api/messages/**"))
-        .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .sessionManagement(
+            session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth
             .requestMatchers(HttpMethod.POST, "/messages", "/api/messages").authenticated()
             .requestMatchers(HttpMethod.POST, "/messages/*/replies", "/api/messages/*/replies")
