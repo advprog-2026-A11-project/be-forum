@@ -7,6 +7,10 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import id.ac.ui.cs.advprog.beforum.controller.support.MessageAuthorizationService;
+import id.ac.ui.cs.advprog.beforum.controller.support.MessagePrincipalResolver;
+import id.ac.ui.cs.advprog.beforum.controller.support.MessageRequestValidator;
+import id.ac.ui.cs.advprog.beforum.controller.support.MessageResponseMapper;
 import id.ac.ui.cs.advprog.beforum.dto.CreateMessageRequest;
 import id.ac.ui.cs.advprog.beforum.dto.MessageResponse;
 import id.ac.ui.cs.advprog.beforum.service.MessageService;
@@ -50,6 +54,11 @@ class MessageControllerUnitTest {
   }
 
   private MessageController controller() {
-    return new MessageController(service);
+    return new MessageController(
+        service,
+        new MessagePrincipalResolver(),
+        new MessageRequestValidator(),
+        new MessageAuthorizationService(),
+        new MessageResponseMapper());
   }
 }

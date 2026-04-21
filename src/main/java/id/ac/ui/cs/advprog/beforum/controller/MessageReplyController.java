@@ -1,11 +1,10 @@
 package id.ac.ui.cs.advprog.beforum.controller;
 
-import id.ac.ui.cs.advprog.beforum.dto.CreateMessageRequest;
-import id.ac.ui.cs.advprog.beforum.dto.MessageResponse;
 import id.ac.ui.cs.advprog.beforum.controller.support.MessageAuthorizationService;
 import id.ac.ui.cs.advprog.beforum.controller.support.MessagePrincipalResolver;
-import id.ac.ui.cs.advprog.beforum.controller.support.MessageRequestValidator;
 import id.ac.ui.cs.advprog.beforum.controller.support.MessageResponseMapper;
+import id.ac.ui.cs.advprog.beforum.dto.CreateMessageRequest;
+import id.ac.ui.cs.advprog.beforum.dto.MessageResponse;
 import id.ac.ui.cs.advprog.beforum.model.Message;
 import id.ac.ui.cs.advprog.beforum.service.MessageService;
 import java.util.List;
@@ -21,109 +20,99 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping({"/messages", "/api/messages"})
-public class MessageController {
+@RequestMapping({"/messages/{parentId}/replies", "/api/messages/{parentId}/replies"})
+public class MessageReplyController {
 
   private final MessageService service;
   private final MessagePrincipalResolver principalResolver;
-  private final MessageRequestValidator requestValidator;
   private final MessageAuthorizationService authorizationService;
   private final MessageResponseMapper responseMapper;
 
-  public MessageController(
+  public MessageReplyController(
       MessageService service,
       MessagePrincipalResolver principalResolver,
-      MessageRequestValidator requestValidator,
       MessageAuthorizationService authorizationService,
       MessageResponseMapper responseMapper) {
     this.service = service;
     this.principalResolver = principalResolver;
-    this.requestValidator = requestValidator;
     this.authorizationService = authorizationService;
     this.responseMapper = responseMapper;
   }
 
   @PostMapping
-  public ResponseEntity<MessageResponse> create(
+  public ResponseEntity<MessageResponse> createReply(
       @AuthenticationPrincipal Jwt jwt,
+      @PathVariable UUID parentId,
       @RequestBody CreateMessageRequest req) {
     UUID userId = principalResolver.extractUserId(jwt);
     if (userId == null) {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
 
-    if (!requestValidator.hasValidReadingId(req)) {
-      return ResponseEntity.badRequest().build();
+    Message reply = service.createReply(parentId, req.content(), userId);
+    if (reply == null) {
+      return ResponseEntity.notFound().build();
     }
-
-    try {
-      Message created = service.createMessage(req.content(), req.readingId(), userId);
-      return ResponseEntity.ok(responseMapper.toResponse(created));
-    } catch (IllegalArgumentException ex) {
-      return ResponseEntity.badRequest().build();
-    }
+    return ResponseEntity.ok(responseMapper.toResponse(reply));
   }
 
   @GetMapping
-  public ResponseEntity<List<MessageResponse>> list(@RequestParam(required = false) String readingId) {
-    return ResponseEntity.ok(responseMapper.toResponses(service.listMessages(readingId)));
-  }
-
-  @GetMapping("/{id}")
-  public ResponseEntity<MessageResponse> getById(@PathVariable UUID id) {
-    Message message = service.findByIdWithReplies(id);
-    if (message == null) {
+  public ResponseEntity<List<MessageResponse>> getReplies(@PathVariable UUID parentId) {
+    Message parent = service.findById(parentId);
+    if (parent == null) {
       return ResponseEntity.notFound().build();
     }
-    return ResponseEntity.ok(responseMapper.toResponse(message));
+    return ResponseEntity.ok(responseMapper.toResponses(service.getReplies(parentId)));
   }
 
-  @PutMapping("/{id}")
-  public ResponseEntity<MessageResponse> update(
+  @PutMapping("/{replyId}")
+  public ResponseEntity<MessageResponse> updateReply(
       @AuthenticationPrincipal Jwt jwt,
-      @PathVariable UUID id,
+      @PathVariable UUID parentId,
+      @PathVariable UUID replyId,
       @RequestBody CreateMessageRequest req) {
     UUID userId = principalResolver.extractUserId(jwt);
     if (userId == null) {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
 
-    Message found = service.findById(id);
-    if (found == null) {
+    Message reply = service.findById(replyId);
+    if (!authorizationService.isReplyOfParent(reply, parentId)) {
       return ResponseEntity.notFound().build();
     }
-    if (!authorizationService.isOwner(found, userId)) {
+    if (!authorizationService.isOwner(reply, userId)) {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
 
-    Message updated = service.updateMessage(id, req.content());
+    Message updated = service.updateMessage(replyId, req.content());
     if (updated == null) {
       return ResponseEntity.notFound().build();
     }
     return ResponseEntity.ok(responseMapper.toResponse(updated));
   }
 
-  @DeleteMapping("/{id}")
-  public ResponseEntity<Void> delete(
+  @DeleteMapping("/{replyId}")
+  public ResponseEntity<Void> deleteReply(
       @AuthenticationPrincipal Jwt jwt,
-      @PathVariable UUID id) {
+      @PathVariable UUID parentId,
+      @PathVariable UUID replyId) {
     UUID userId = principalResolver.extractUserId(jwt);
     if (userId == null) {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
 
-    Message found = service.findById(id);
-    if (found == null) {
+    Message reply = service.findById(replyId);
+    if (!authorizationService.isReplyOfParent(reply, parentId)) {
       return ResponseEntity.notFound().build();
     }
-    if (!authorizationService.isOwner(found, userId)) {
+    if (!authorizationService.isOwner(reply, userId)) {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
-    service.deleteMessage(id);
+
+    service.deleteMessage(replyId);
     return ResponseEntity.noContent().build();
   }
 }

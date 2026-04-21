@@ -14,6 +14,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import id.ac.ui.cs.advprog.beforum.controller.support.MessageAuthorizationService;
+import id.ac.ui.cs.advprog.beforum.controller.support.MessagePrincipalResolver;
+import id.ac.ui.cs.advprog.beforum.controller.support.MessageRequestValidator;
+import id.ac.ui.cs.advprog.beforum.controller.support.MessageResponseMapper;
 import id.ac.ui.cs.advprog.beforum.model.Message;
 import id.ac.ui.cs.advprog.beforum.security.SecurityConfig;
 import id.ac.ui.cs.advprog.beforum.service.MessageService;
@@ -32,8 +36,14 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
-@WebMvcTest(MessageController.class)
-@Import(SecurityConfig.class)
+@WebMvcTest({MessageController.class, MessageReplyController.class})
+@Import({
+    SecurityConfig.class,
+    MessagePrincipalResolver.class,
+    MessageRequestValidator.class,
+    MessageAuthorizationService.class,
+    MessageResponseMapper.class
+})
 class MessageControllerTest {
 
   @Autowired
