@@ -1,8 +1,8 @@
 package id.ac.ui.cs.advprog.beforum.controller;
 
 import id.ac.ui.cs.advprog.beforum.controller.support.MessageAuthorizationService;
-import id.ac.ui.cs.advprog.beforum.controller.support.MessagePrincipalResolver;
 import id.ac.ui.cs.advprog.beforum.controller.support.MessageResponseMapper;
+import id.ac.ui.cs.advprog.beforum.controller.support.UseCaseRequestHandler;
 import id.ac.ui.cs.advprog.beforum.dto.CreateMessageRequest;
 import id.ac.ui.cs.advprog.beforum.dto.MessageResponse;
 import id.ac.ui.cs.advprog.beforum.model.Message;
@@ -27,17 +27,17 @@ import org.springframework.web.bind.annotation.RestController;
 public class MessageReplyController {
 
   private final MessageService service;
-  private final MessagePrincipalResolver principalResolver;
+  private final UseCaseRequestHandler requestHandler;
   private final MessageAuthorizationService authorizationService;
   private final MessageResponseMapper responseMapper;
 
   public MessageReplyController(
       MessageService service,
-      MessagePrincipalResolver principalResolver,
+      UseCaseRequestHandler requestHandler,
       MessageAuthorizationService authorizationService,
       MessageResponseMapper responseMapper) {
     this.service = service;
-    this.principalResolver = principalResolver;
+    this.requestHandler = requestHandler;
     this.authorizationService = authorizationService;
     this.responseMapper = responseMapper;
   }
@@ -47,16 +47,13 @@ public class MessageReplyController {
       @AuthenticationPrincipal Jwt jwt,
       @PathVariable UUID parentId,
       @RequestBody CreateMessageRequest req) {
-    UUID userId = principalResolver.extractUserId(jwt);
-    if (userId == null) {
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-    }
-
-    Message reply = service.createReply(parentId, req.content(), userId);
-    if (reply == null) {
-      return ResponseEntity.notFound().build();
-    }
-    return ResponseEntity.ok(responseMapper.toResponse(reply));
+    return requestHandler.withAuthenticatedUuid(jwt, userId -> {
+      Message reply = service.createReply(parentId, req.content(), userId);
+      if (reply == null) {
+        return ResponseEntity.notFound().build();
+      }
+      return ResponseEntity.ok(responseMapper.toResponse(reply));
+    });
   }
 
   @GetMapping
@@ -74,24 +71,22 @@ public class MessageReplyController {
       @PathVariable UUID parentId,
       @PathVariable UUID replyId,
       @RequestBody CreateMessageRequest req) {
-    UUID userId = principalResolver.extractUserId(jwt);
-    if (userId == null) {
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-    }
-
-    Message reply = service.findById(replyId);
-    if (!authorizationService.isReplyOfParent(reply, parentId)) {
-      return ResponseEntity.notFound().build();
-    }
-    if (!authorizationService.isOwner(reply, userId)) {
-      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-    }
-
-    Message updated = service.updateMessage(replyId, req.content());
-    if (updated == null) {
-      return ResponseEntity.notFound().build();
-    }
-    return ResponseEntity.ok(responseMapper.toResponse(updated));
+    return requestHandler.withAuthenticatedUuid(jwt, userId -> {
+      Message reply = service.findById(replyId);
+      return requestHandler.require(
+          authorizationService.isReplyOfParent(reply, parentId),
+          HttpStatus.NOT_FOUND,
+          () -> requestHandler.require(
+              authorizationService.isOwner(reply, userId),
+              HttpStatus.FORBIDDEN,
+              () -> {
+                Message updated = service.updateMessage(replyId, req.content());
+                if (updated == null) {
+                  return ResponseEntity.notFound().build();
+                }
+                return ResponseEntity.ok(responseMapper.toResponse(updated));
+              }));
+    });
   }
 
   @DeleteMapping("/{replyId}")
@@ -99,20 +94,18 @@ public class MessageReplyController {
       @AuthenticationPrincipal Jwt jwt,
       @PathVariable UUID parentId,
       @PathVariable UUID replyId) {
-    UUID userId = principalResolver.extractUserId(jwt);
-    if (userId == null) {
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-    }
-
-    Message reply = service.findById(replyId);
-    if (!authorizationService.isReplyOfParent(reply, parentId)) {
-      return ResponseEntity.notFound().build();
-    }
-    if (!authorizationService.isOwner(reply, userId)) {
-      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-    }
-
-    service.deleteMessage(replyId);
-    return ResponseEntity.noContent().build();
+    return requestHandler.withAuthenticatedUuid(jwt, userId -> {
+      Message reply = service.findById(replyId);
+      return requestHandler.require(
+          authorizationService.isReplyOfParent(reply, parentId),
+          HttpStatus.NOT_FOUND,
+          () -> requestHandler.require(
+              authorizationService.isOwner(reply, userId),
+              HttpStatus.FORBIDDEN,
+              () -> {
+                service.deleteMessage(replyId);
+                return ResponseEntity.noContent().build();
+              }));
+    });
   }
 }

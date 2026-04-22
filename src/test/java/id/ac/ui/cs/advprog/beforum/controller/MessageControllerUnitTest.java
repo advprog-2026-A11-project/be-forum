@@ -11,6 +11,7 @@ import id.ac.ui.cs.advprog.beforum.controller.support.MessageAuthorizationServic
 import id.ac.ui.cs.advprog.beforum.controller.support.MessagePrincipalResolver;
 import id.ac.ui.cs.advprog.beforum.controller.support.MessageRequestValidator;
 import id.ac.ui.cs.advprog.beforum.controller.support.MessageResponseMapper;
+import id.ac.ui.cs.advprog.beforum.controller.support.UseCaseRequestHandler;
 import id.ac.ui.cs.advprog.beforum.dto.CreateMessageRequest;
 import id.ac.ui.cs.advprog.beforum.dto.MessageResponse;
 import id.ac.ui.cs.advprog.beforum.service.MessageService;
@@ -56,7 +57,7 @@ class MessageControllerUnitTest {
   private MessageController controller() {
     return new MessageController(
         service,
-        new MessagePrincipalResolver(),
+        new UseCaseRequestHandler(new MessagePrincipalResolver()),
         new MessageRequestValidator(),
         new MessageAuthorizationService(),
         new MessageResponseMapper());

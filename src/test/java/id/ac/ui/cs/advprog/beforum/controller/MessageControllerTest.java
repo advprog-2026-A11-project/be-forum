@@ -18,6 +18,7 @@ import id.ac.ui.cs.advprog.beforum.controller.support.MessageAuthorizationServic
 import id.ac.ui.cs.advprog.beforum.controller.support.MessagePrincipalResolver;
 import id.ac.ui.cs.advprog.beforum.controller.support.MessageRequestValidator;
 import id.ac.ui.cs.advprog.beforum.controller.support.MessageResponseMapper;
+import id.ac.ui.cs.advprog.beforum.controller.support.UseCaseRequestHandler;
 import id.ac.ui.cs.advprog.beforum.model.Message;
 import id.ac.ui.cs.advprog.beforum.security.SecurityConfig;
 import id.ac.ui.cs.advprog.beforum.service.MessageService;
@@ -40,6 +41,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 @Import({
     SecurityConfig.class,
     MessagePrincipalResolver.class,
+    UseCaseRequestHandler.class,
     MessageRequestValidator.class,
     MessageAuthorizationService.class,
     MessageResponseMapper.class

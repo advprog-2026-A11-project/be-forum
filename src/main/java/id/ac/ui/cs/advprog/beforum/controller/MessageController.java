@@ -3,9 +3,9 @@ package id.ac.ui.cs.advprog.beforum.controller;
 import id.ac.ui.cs.advprog.beforum.dto.CreateMessageRequest;
 import id.ac.ui.cs.advprog.beforum.dto.MessageResponse;
 import id.ac.ui.cs.advprog.beforum.controller.support.MessageAuthorizationService;
-import id.ac.ui.cs.advprog.beforum.controller.support.MessagePrincipalResolver;
 import id.ac.ui.cs.advprog.beforum.controller.support.MessageRequestValidator;
 import id.ac.ui.cs.advprog.beforum.controller.support.MessageResponseMapper;
+import id.ac.ui.cs.advprog.beforum.controller.support.UseCaseRequestHandler;
 import id.ac.ui.cs.advprog.beforum.model.Message;
 import id.ac.ui.cs.advprog.beforum.service.MessageService;
 import java.util.List;
@@ -29,19 +29,19 @@ import org.springframework.web.bind.annotation.RestController;
 public class MessageController {
 
   private final MessageService service;
-  private final MessagePrincipalResolver principalResolver;
+  private final UseCaseRequestHandler requestHandler;
   private final MessageRequestValidator requestValidator;
   private final MessageAuthorizationService authorizationService;
   private final MessageResponseMapper responseMapper;
 
   public MessageController(
       MessageService service,
-      MessagePrincipalResolver principalResolver,
+      UseCaseRequestHandler requestHandler,
       MessageRequestValidator requestValidator,
       MessageAuthorizationService authorizationService,
       MessageResponseMapper responseMapper) {
     this.service = service;
-    this.principalResolver = principalResolver;
+    this.requestHandler = requestHandler;
     this.requestValidator = requestValidator;
     this.authorizationService = authorizationService;
     this.responseMapper = responseMapper;
@@ -51,21 +51,18 @@ public class MessageController {
   public ResponseEntity<MessageResponse> create(
       @AuthenticationPrincipal Jwt jwt,
       @RequestBody CreateMessageRequest req) {
-    UUID userId = principalResolver.extractUserId(jwt);
-    if (userId == null) {
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-    }
+    return requestHandler.withAuthenticatedUuid(jwt, userId -> {
+      if (!requestValidator.hasValidReadingId(req)) {
+        return ResponseEntity.badRequest().build();
+      }
 
-    if (!requestValidator.hasValidReadingId(req)) {
-      return ResponseEntity.badRequest().build();
-    }
-
-    try {
-      Message created = service.createMessage(req.content(), req.readingId(), userId);
-      return ResponseEntity.ok(responseMapper.toResponse(created));
-    } catch (IllegalArgumentException ex) {
-      return ResponseEntity.badRequest().build();
-    }
+      try {
+        Message created = service.createMessage(req.content(), req.readingId(), userId);
+        return ResponseEntity.ok(responseMapper.toResponse(created));
+      } catch (IllegalArgumentException ex) {
+        return ResponseEntity.badRequest().build();
+      }
+    });
   }
 
   @GetMapping
@@ -87,43 +84,36 @@ public class MessageController {
       @AuthenticationPrincipal Jwt jwt,
       @PathVariable UUID id,
       @RequestBody CreateMessageRequest req) {
-    UUID userId = principalResolver.extractUserId(jwt);
-    if (userId == null) {
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-    }
-
-    Message found = service.findById(id);
-    if (found == null) {
-      return ResponseEntity.notFound().build();
-    }
-    if (!authorizationService.isOwner(found, userId)) {
-      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-    }
-
-    Message updated = service.updateMessage(id, req.content());
-    if (updated == null) {
-      return ResponseEntity.notFound().build();
-    }
-    return ResponseEntity.ok(responseMapper.toResponse(updated));
+    return requestHandler.withAuthenticatedUuid(jwt, userId -> {
+      Message found = service.findById(id);
+      return requestHandler.require(found != null, HttpStatus.NOT_FOUND, () ->
+          requestHandler.require(
+              authorizationService.isOwner(found, userId),
+              HttpStatus.FORBIDDEN,
+              () -> {
+                Message updated = service.updateMessage(id, req.content());
+                if (updated == null) {
+                  return ResponseEntity.notFound().build();
+                }
+                return ResponseEntity.ok(responseMapper.toResponse(updated));
+              }));
+    });
   }
 
   @DeleteMapping("/{id}")
   public ResponseEntity<Void> delete(
       @AuthenticationPrincipal Jwt jwt,
       @PathVariable UUID id) {
-    UUID userId = principalResolver.extractUserId(jwt);
-    if (userId == null) {
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-    }
-
-    Message found = service.findById(id);
-    if (found == null) {
-      return ResponseEntity.notFound().build();
-    }
-    if (!authorizationService.isOwner(found, userId)) {
-      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-    }
-    service.deleteMessage(id);
-    return ResponseEntity.noContent().build();
+    return requestHandler.withAuthenticatedUuid(jwt, userId -> {
+      Message found = service.findById(id);
+      return requestHandler.require(found != null, HttpStatus.NOT_FOUND, () ->
+          requestHandler.require(
+              authorizationService.isOwner(found, userId),
+              HttpStatus.FORBIDDEN,
+              () -> {
+                service.deleteMessage(id);
+                return ResponseEntity.noContent().build();
+              }));
+    });
   }
 }
