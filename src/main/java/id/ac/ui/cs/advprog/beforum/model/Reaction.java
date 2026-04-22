@@ -32,7 +32,7 @@ public class Reaction {
   private ReactionType reactionType;
 
   @Column(name = "user_id", nullable = false)
-  private String userId;
+  private UUID userId;
 
   @Column(name = "created_at", nullable = false, columnDefinition = "TIMESTAMP WITH TIME ZONE")
   private OffsetDateTime createdAt = OffsetDateTime.now();

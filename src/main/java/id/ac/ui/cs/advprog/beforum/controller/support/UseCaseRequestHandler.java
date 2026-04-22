@@ -11,27 +11,16 @@ import org.springframework.stereotype.Component;
 @Component
 public class UseCaseRequestHandler {
 
-  private final MessagePrincipalResolver principalResolver;
-
-  public UseCaseRequestHandler(MessagePrincipalResolver principalResolver) {
-    this.principalResolver = principalResolver;
+  public UseCaseRequestHandler() {
   }
 
   public <T> ResponseEntity<T> withAuthenticatedUuid(
       Jwt jwt, Function<UUID, ResponseEntity<T>> useCase) {
-    UUID userId = principalResolver.extractUserId(jwt);
+    UUID userId = extractUserId(jwt);
     if (userId == null) {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
     return useCase.apply(userId);
-  }
-
-  public <T> ResponseEntity<T> withAuthenticatedSubject(
-      Jwt jwt, Function<String, ResponseEntity<T>> useCase) {
-    if (jwt == null || jwt.getSubject() == null || jwt.getSubject().isBlank()) {
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-    }
-    return useCase.apply(jwt.getSubject());
   }
 
   public <T> ResponseEntity<T> require(
@@ -40,5 +29,17 @@ public class UseCaseRequestHandler {
       return ResponseEntity.status(failureStatus).build();
     }
     return onSuccess.get();
+  }
+
+  private UUID extractUserId(Jwt jwt) {
+    if (jwt == null || jwt.getSubject() == null || jwt.getSubject().isBlank()) {
+      return null;
+    }
+
+    try {
+      return UUID.fromString(jwt.getSubject());
+    } catch (IllegalArgumentException ex) {
+      return null;
+    }
   }
 }

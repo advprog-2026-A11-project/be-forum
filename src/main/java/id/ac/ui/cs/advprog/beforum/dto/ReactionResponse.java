@@ -7,7 +7,7 @@ import java.util.UUID;
 public record ReactionResponse(
     UUID id,
     ReactionType reactionType,
-    String userId,
+    UUID userId,
     OffsetDateTime createdAt,
     UUID messageId) {
 }

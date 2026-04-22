@@ -13,7 +13,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import id.ac.ui.cs.advprog.beforum.controller.support.MessagePrincipalResolver;
 import id.ac.ui.cs.advprog.beforum.controller.support.UseCaseRequestHandler;
 import id.ac.ui.cs.advprog.beforum.security.SecurityConfig;
 import id.ac.ui.cs.advprog.beforum.model.Message;
@@ -38,7 +37,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 @WebMvcTest(ReactionController.class)
-@Import({SecurityConfig.class, MessagePrincipalResolver.class, UseCaseRequestHandler.class})
+@Import({SecurityConfig.class, UseCaseRequestHandler.class})
 class ReactionControllerTest {
 
   @Autowired
@@ -57,17 +56,17 @@ class ReactionControllerTest {
   private Reaction reaction;
   private UUID messageId;
   private UUID reactionId;
-  private String userId;
+  private UUID userId;
 
   private RequestPostProcessor authenticatedJwt() {
-    return jwt().jwt(token -> token.subject(userId));
+    return jwt().jwt(token -> token.subject(userId.toString()));
   }
 
   @BeforeEach
   void setUp() {
     messageId = UUID.randomUUID();
     reactionId = UUID.randomUUID();
-    userId = "user123";
+    userId = UUID.randomUUID();
 
     message = new Message();
     message.setId(messageId);
@@ -97,7 +96,7 @@ class ReactionControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(reactionId.toString()))
         .andExpect(jsonPath("$.reactionType").value("UPVOTE"))
-        .andExpect(jsonPath("$.userId").value(userId));
+        .andExpect(jsonPath("$.userId").value(userId.toString()));
 
     verify(service).addReaction(messageId, userId, ReactionType.UPVOTE);
   }
@@ -245,7 +244,7 @@ class ReactionControllerTest {
     Reaction reaction2 = new Reaction();
     reaction2.setId(UUID.randomUUID());
     reaction2.setReactionType(ReactionType.FIRE);
-    reaction2.setUserId("user456");
+    reaction2.setUserId(UUID.randomUUID());
     reaction2.setMessage(message);
 
     List<Reaction> reactions = Arrays.asList(reaction, reaction2);
@@ -288,7 +287,7 @@ class ReactionControllerTest {
     mockMvc.perform(get("/api/messages/{messageId}/reactions/user/{userId}", messageId, userId))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.length()").value(1))
-        .andExpect(jsonPath("$[0].userId").value(userId))
+        .andExpect(jsonPath("$[0].userId").value(userId.toString()))
         .andExpect(jsonPath("$[0].reactionType").value("UPVOTE"));
   }
 

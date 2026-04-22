@@ -15,7 +15,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import id.ac.ui.cs.advprog.beforum.controller.support.MessageAuthorizationService;
-import id.ac.ui.cs.advprog.beforum.controller.support.MessagePrincipalResolver;
 import id.ac.ui.cs.advprog.beforum.controller.support.MessageRequestValidator;
 import id.ac.ui.cs.advprog.beforum.controller.support.MessageResponseMapper;
 import id.ac.ui.cs.advprog.beforum.controller.support.UseCaseRequestHandler;
@@ -40,7 +39,6 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 @WebMvcTest({MessageController.class, MessageReplyController.class})
 @Import({
     SecurityConfig.class,
-    MessagePrincipalResolver.class,
     UseCaseRequestHandler.class,
     MessageRequestValidator.class,
     MessageAuthorizationService.class,

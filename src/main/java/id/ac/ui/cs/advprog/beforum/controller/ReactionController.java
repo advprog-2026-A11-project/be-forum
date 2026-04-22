@@ -38,7 +38,7 @@ public class ReactionController {
       @AuthenticationPrincipal Jwt jwt,
       @PathVariable UUID messageId,
       @RequestBody ReactionRequest req) {
-    return requestHandler.withAuthenticatedSubject(jwt, userId -> {
+    return requestHandler.withAuthenticatedUuid(jwt, userId -> {
       Reaction reaction;
       try {
         reaction = service.addReaction(messageId, userId, req.reactionType());
@@ -57,7 +57,7 @@ public class ReactionController {
       @AuthenticationPrincipal Jwt jwt,
       @PathVariable UUID messageId,
       @RequestBody ReactionRequest req) {
-    return requestHandler.withAuthenticatedSubject(jwt, userId -> {
+    return requestHandler.withAuthenticatedUuid(jwt, userId -> {
       boolean removed = service.removeReaction(messageId, userId, req.reactionType());
       if (!removed) {
         return ResponseEntity.notFound().build();
@@ -81,7 +81,7 @@ public class ReactionController {
   @GetMapping("/user/{userId}")
   public ResponseEntity<List<ReactionResponse>> getUserReactions(
       @PathVariable UUID messageId,
-      @PathVariable String userId) {
+      @PathVariable UUID userId) {
     List<Reaction> reactions = service.getUserReactionsOnMessage(messageId, userId);
     return ResponseEntity.ok(reactions.stream().map(this::toResponse).toList());
   }

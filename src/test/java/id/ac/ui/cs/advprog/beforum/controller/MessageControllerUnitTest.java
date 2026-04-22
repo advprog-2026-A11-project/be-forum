@@ -8,7 +8,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import id.ac.ui.cs.advprog.beforum.controller.support.MessageAuthorizationService;
-import id.ac.ui.cs.advprog.beforum.controller.support.MessagePrincipalResolver;
 import id.ac.ui.cs.advprog.beforum.controller.support.MessageRequestValidator;
 import id.ac.ui.cs.advprog.beforum.controller.support.MessageResponseMapper;
 import id.ac.ui.cs.advprog.beforum.controller.support.UseCaseRequestHandler;
@@ -57,7 +56,7 @@ class MessageControllerUnitTest {
   private MessageController controller() {
     return new MessageController(
         service,
-        new UseCaseRequestHandler(new MessagePrincipalResolver()),
+        new UseCaseRequestHandler(),
         new MessageRequestValidator(),
         new MessageAuthorizationService(),
         new MessageResponseMapper());

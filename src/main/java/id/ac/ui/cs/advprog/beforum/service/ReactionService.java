@@ -26,7 +26,7 @@ public class ReactionService {
   }
 
   @Transactional
-  public Reaction addReaction(UUID messageId, String userId, ReactionType reactionType) {
+  public Reaction addReaction(UUID messageId, UUID userId, ReactionType reactionType) {
     Optional<Message> messageOpt = messageRepository.findById(messageId);
     if (messageOpt.isEmpty()) {
       return null;
@@ -64,7 +64,7 @@ public class ReactionService {
 
   @Transactional
   public boolean removeReaction(UUID messageId,
-                                String userId,
+                                UUID userId,
                                 ReactionType reactionType) {
     Optional<Reaction> existingReaction =
         reactionRepository.findByMessageIdAndUserIdAndReactionType(
@@ -84,7 +84,7 @@ public class ReactionService {
   }
 
   @Transactional(readOnly = true)
-  public List<Reaction> getUserReactionsOnMessage(UUID messageId, String userId) {
+  public List<Reaction> getUserReactionsOnMessage(UUID messageId, UUID userId) {
     return reactionRepository.findByMessageIdAndUserId(
         messageId,
         userId
