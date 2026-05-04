@@ -1,11 +1,11 @@
 package id.ac.ui.cs.advprog.beforum.controller;
 
-import id.ac.ui.cs.advprog.beforum.dto.CreateMessageRequest;
-import id.ac.ui.cs.advprog.beforum.dto.MessageResponse;
 import id.ac.ui.cs.advprog.beforum.controller.support.MessageAuthorizationService;
 import id.ac.ui.cs.advprog.beforum.controller.support.MessageRequestValidator;
 import id.ac.ui.cs.advprog.beforum.controller.support.MessageResponseMapper;
 import id.ac.ui.cs.advprog.beforum.controller.support.UseCaseRequestHandler;
+import id.ac.ui.cs.advprog.beforum.dto.CreateMessageRequest;
+import id.ac.ui.cs.advprog.beforum.dto.MessageResponse;
 import id.ac.ui.cs.advprog.beforum.model.Message;
 import id.ac.ui.cs.advprog.beforum.service.MessageService;
 import java.util.List;
@@ -62,7 +62,8 @@ public class MessageController {
   }
 
   @GetMapping
-  public ResponseEntity<List<MessageResponse>> list(@RequestParam(required = false) String readingId) {
+  public ResponseEntity<List<MessageResponse>> list(
+      @RequestParam(required = false) String readingId) {
     return ResponseEntity.ok(responseMapper.toResponses(service.listMessages(readingId)));
   }
 
