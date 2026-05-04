@@ -1,7 +1,5 @@
 package id.ac.ui.cs.advprog.beforum.model;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -24,7 +22,6 @@ import lombok.Setter;
 @AllArgsConstructor
 @Entity
 @Table(name = "reactions")
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Reaction {
   @Id
   @Column(name = "id", updatable = false, nullable = false)
@@ -35,14 +32,13 @@ public class Reaction {
   private ReactionType reactionType;
 
   @Column(name = "user_id", nullable = false)
-  private String userId;
+  private UUID userId;
 
   @Column(name = "created_at", nullable = false, columnDefinition = "TIMESTAMP WITH TIME ZONE")
   private OffsetDateTime createdAt = OffsetDateTime.now();
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "message_id", nullable = false)
-  @JsonBackReference
   private Message message;
 
   public UUID getMessageId() {

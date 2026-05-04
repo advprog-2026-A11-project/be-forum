@@ -7,7 +7,12 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import id.ac.ui.cs.advprog.beforum.model.Message;
+import id.ac.ui.cs.advprog.beforum.controller.support.MessageAuthorizationService;
+import id.ac.ui.cs.advprog.beforum.controller.support.MessageRequestValidator;
+import id.ac.ui.cs.advprog.beforum.controller.support.MessageResponseMapper;
+import id.ac.ui.cs.advprog.beforum.controller.support.UseCaseRequestHandler;
+import id.ac.ui.cs.advprog.beforum.dto.CreateMessageRequest;
+import id.ac.ui.cs.advprog.beforum.dto.MessageResponse;
 import id.ac.ui.cs.advprog.beforum.service.MessageService;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -29,7 +34,7 @@ class MessageControllerUnitTest {
     Jwt jwt = mock(Jwt.class);
     when(jwt.getSubject()).thenReturn(UUID.randomUUID().toString());
 
-    ResponseEntity<Message> response = controller().create(jwt, null);
+    ResponseEntity<MessageResponse> response = controller().create(jwt, null);
 
     assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
     verify(service, never()).createMessage(any(), any(), any());
@@ -40,15 +45,20 @@ class MessageControllerUnitTest {
     Jwt jwt = mock(Jwt.class);
     when(jwt.getSubject()).thenReturn(null);
 
-    ResponseEntity<Message> response = controller().create(
+    ResponseEntity<MessageResponse> response = controller().create(
         jwt,
-        new MessageController.CreateMessageRequest("content", "reading-1"));
+        new CreateMessageRequest("content", "reading-1"));
 
     assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
     verify(service, never()).createMessage(any(), any(), any());
   }
 
   private MessageController controller() {
-    return new MessageController(service);
+    return new MessageController(
+        service,
+        new UseCaseRequestHandler(),
+        new MessageRequestValidator(),
+        new MessageAuthorizationService(),
+        new MessageResponseMapper());
   }
 }

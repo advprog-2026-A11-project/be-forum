@@ -22,13 +22,13 @@ public interface ReactionRepository extends JpaRepository<Reaction, UUID> {
       + "AND r.reactionType = :reactionType")
   Optional<Reaction> findByMessageIdAndUserIdAndReactionType(
       @Param("messageId") UUID messageId,
-      @Param("userId") String userId,
+      @Param("userId") UUID userId,
       @Param("reactionType") ReactionType reactionType);
 
   @Query("SELECT r FROM Reaction r WHERE r.message.id = :messageId AND r.userId = :userId")
   List<Reaction> findByMessageIdAndUserId(
       @Param("messageId") UUID messageId,
-      @Param("userId") String userId);
+      @Param("userId") UUID userId);
 
   @Query("SELECT COUNT(r) FROM Reaction r "
       + "WHERE r.message.id = :messageId "

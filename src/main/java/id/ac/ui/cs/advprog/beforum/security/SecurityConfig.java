@@ -14,24 +14,30 @@ public class SecurityConfig {
   @Bean
   public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
     http
-        .csrf(csrf -> csrf.ignoringRequestMatchers("/messages/**", "/api/messages/**"))
+        .csrf(csrf -> csrf.ignoringRequestMatchers("/api/messages/**"))
         .sessionManagement(
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers(HttpMethod.POST, "/messages", "/api/messages").authenticated()
-            .requestMatchers(HttpMethod.POST, "/messages/*/replies", "/api/messages/*/replies")
+            .requestMatchers(HttpMethod.POST, "/api/messages").authenticated()
+            .requestMatchers(HttpMethod.POST, "/api/messages/*/replies")
             .authenticated()
-            .requestMatchers(HttpMethod.PUT, "/messages/*", "/api/messages/*").authenticated()
+            .requestMatchers(
+                HttpMethod.POST,
+                "/api/messages/*/reactions")
+            .authenticated()
+            .requestMatchers(HttpMethod.PUT, "/api/messages/*").authenticated()
             .requestMatchers(
                 HttpMethod.PUT,
-                "/messages/*/replies/*",
                 "/api/messages/*/replies/*")
             .authenticated()
-            .requestMatchers(HttpMethod.DELETE, "/messages/*", "/api/messages/*").authenticated()
+            .requestMatchers(HttpMethod.DELETE, "/api/messages/*").authenticated()
             .requestMatchers(
                 HttpMethod.DELETE,
-                "/messages/*/replies/*",
                 "/api/messages/*/replies/*")
+            .authenticated()
+            .requestMatchers(
+                HttpMethod.DELETE,
+                "/api/messages/*/reactions")
             .authenticated()
             .anyRequest().permitAll())
         .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));

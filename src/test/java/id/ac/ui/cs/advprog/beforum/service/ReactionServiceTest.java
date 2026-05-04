@@ -45,13 +45,13 @@ class ReactionServiceTest {
   private Reaction reaction;
   private UUID messageId;
   private UUID reactionId;
-  private String userId;
+  private UUID userId;
 
   @BeforeEach
   void setUp() {
     messageId = UUID.randomUUID();
     reactionId = UUID.randomUUID();
-    userId = "user123";
+    userId = UUID.randomUUID();
 
     message = new Message();
     message.setId(messageId);
@@ -190,7 +190,7 @@ class ReactionServiceTest {
     Reaction reaction2 = new Reaction();
     reaction2.setId(UUID.randomUUID());
     reaction2.setReactionType(ReactionType.FIRE);
-    reaction2.setUserId("user456");
+    reaction2.setUserId(UUID.randomUUID());
     reaction2.setMessage(message);
 
     List<Reaction> reactions = Arrays.asList(reaction, reaction2);

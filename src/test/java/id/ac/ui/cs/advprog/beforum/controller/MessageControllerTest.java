@@ -14,6 +14,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import id.ac.ui.cs.advprog.beforum.controller.support.MessageAuthorizationService;
+import id.ac.ui.cs.advprog.beforum.controller.support.MessageRequestValidator;
+import id.ac.ui.cs.advprog.beforum.controller.support.MessageResponseMapper;
+import id.ac.ui.cs.advprog.beforum.controller.support.UseCaseRequestHandler;
 import id.ac.ui.cs.advprog.beforum.model.Message;
 import id.ac.ui.cs.advprog.beforum.security.SecurityConfig;
 import id.ac.ui.cs.advprog.beforum.service.MessageService;
@@ -32,8 +36,14 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
-@WebMvcTest(MessageController.class)
-@Import(SecurityConfig.class)
+@WebMvcTest({MessageController.class, MessageReplyController.class})
+@Import({
+    SecurityConfig.class,
+    UseCaseRequestHandler.class,
+    MessageRequestValidator.class,
+    MessageAuthorizationService.class,
+    MessageResponseMapper.class
+})
 class MessageControllerTest {
 
   @Autowired
@@ -84,7 +94,7 @@ class MessageControllerTest {
   void createReplyShouldReturnCreatedReply() throws Exception {
     when(service.createReply(eq(parentId), eq("Reply content"), eq(userId))).thenReturn(reply);
 
-    mockMvc.perform(post("/messages/{parentId}/replies", parentId)
+    mockMvc.perform(post("/api/messages/{parentId}/replies", parentId)
             .with(authenticatedJwt())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"content\": \"Reply content\"}"))
@@ -100,7 +110,7 @@ class MessageControllerTest {
   void createReplyShouldReturn404WhenParentNotFound() throws Exception {
     when(service.createReply(eq(parentId), any(), eq(userId))).thenReturn(null);
 
-    mockMvc.perform(post("/messages/{parentId}/replies", parentId)
+    mockMvc.perform(post("/api/messages/{parentId}/replies", parentId)
             .with(authenticatedJwt())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"content\": \"Reply content\"}"))
@@ -109,7 +119,7 @@ class MessageControllerTest {
 
   @Test
   void createReplyShouldReturn401WhenJwtMissing() throws Exception {
-    mockMvc.perform(post("/messages/{parentId}/replies", parentId)
+    mockMvc.perform(post("/api/messages/{parentId}/replies", parentId)
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"content\": \"Reply content\"}"))
         .andExpect(status().isUnauthorized());
@@ -126,7 +136,7 @@ class MessageControllerTest {
     when(service.findById(parentId)).thenReturn(parentMessage);
     when(service.getReplies(parentId)).thenReturn(replies);
 
-    mockMvc.perform(get("/messages/{parentId}/replies", parentId))
+    mockMvc.perform(get("/api/messages/{parentId}/replies", parentId))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.length()").value(2))
         .andExpect(jsonPath("$[0].content").value("Reply content"))
@@ -137,7 +147,7 @@ class MessageControllerTest {
   void getRepliesShouldReturn404WhenParentNotFound() throws Exception {
     when(service.findById(parentId)).thenReturn(null);
 
-    mockMvc.perform(get("/messages/{parentId}/replies", parentId))
+    mockMvc.perform(get("/api/messages/{parentId}/replies", parentId))
         .andExpect(status().isNotFound());
   }
 
@@ -152,7 +162,7 @@ class MessageControllerTest {
     when(service.findById(replyId)).thenReturn(reply);
     when(service.updateMessage(eq(replyId), eq(newContent))).thenReturn(updatedReply);
 
-    mockMvc.perform(put("/messages/{parentId}/replies/{replyId}", parentId, replyId)
+    mockMvc.perform(put("/api/messages/{parentId}/replies/{replyId}", parentId, replyId)
             .with(authenticatedJwt())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"content\": \"Updated reply content\"}"))
@@ -166,7 +176,7 @@ class MessageControllerTest {
   void updateReplyShouldReturn404WhenReplyNotFound() throws Exception {
     when(service.findById(replyId)).thenReturn(null);
 
-    mockMvc.perform(put("/messages/{parentId}/replies/{replyId}", parentId, replyId)
+    mockMvc.perform(put("/api/messages/{parentId}/replies/{replyId}", parentId, replyId)
             .with(authenticatedJwt())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"content\": \"Updated content\"}"))
@@ -178,7 +188,7 @@ class MessageControllerTest {
     UUID wrongParentId = UUID.randomUUID();
     when(service.findById(replyId)).thenReturn(reply);
 
-    mockMvc.perform(put("/messages/{parentId}/replies/{replyId}", wrongParentId, replyId)
+    mockMvc.perform(put("/api/messages/{parentId}/replies/{replyId}", wrongParentId, replyId)
             .with(authenticatedJwt())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"content\": \"Updated content\"}"))
@@ -189,7 +199,7 @@ class MessageControllerTest {
   void deleteReplyShouldReturn204() throws Exception {
     when(service.findById(replyId)).thenReturn(reply);
 
-    mockMvc.perform(delete("/messages/{parentId}/replies/{replyId}", parentId, replyId)
+    mockMvc.perform(delete("/api/messages/{parentId}/replies/{replyId}", parentId, replyId)
             .with(authenticatedJwt()))
         .andExpect(status().isNoContent());
 
@@ -200,7 +210,7 @@ class MessageControllerTest {
   void deleteReplyShouldReturn404WhenReplyNotFound() throws Exception {
     when(service.findById(replyId)).thenReturn(null);
 
-    mockMvc.perform(delete("/messages/{parentId}/replies/{replyId}", parentId, replyId)
+    mockMvc.perform(delete("/api/messages/{parentId}/replies/{replyId}", parentId, replyId)
             .with(authenticatedJwt()))
         .andExpect(status().isNotFound());
   }
@@ -210,7 +220,7 @@ class MessageControllerTest {
     UUID wrongParentId = UUID.randomUUID();
     when(service.findById(replyId)).thenReturn(reply);
 
-    mockMvc.perform(delete("/messages/{parentId}/replies/{replyId}", wrongParentId, replyId)
+    mockMvc.perform(delete("/api/messages/{parentId}/replies/{replyId}", wrongParentId, replyId)
             .with(authenticatedJwt()))
         .andExpect(status().isNotFound());
   }
@@ -223,7 +233,7 @@ class MessageControllerTest {
     ownedByAnotherUser.setParent(parentMessage);
     when(service.findById(replyId)).thenReturn(ownedByAnotherUser);
 
-    mockMvc.perform(delete("/messages/{parentId}/replies/{replyId}", parentId, replyId)
+    mockMvc.perform(delete("/api/messages/{parentId}/replies/{replyId}", parentId, replyId)
             .with(authenticatedJwt()))
         .andExpect(status().isForbidden());
 
@@ -235,7 +245,7 @@ class MessageControllerTest {
     parentMessage.getReplies().add(reply);
     when(service.findByIdWithReplies(parentId)).thenReturn(parentMessage);
 
-    mockMvc.perform(get("/messages/{id}", parentId))
+    mockMvc.perform(get("/api/messages/{id}", parentId))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(parentId.toString()))
         .andExpect(jsonPath("$.content").value("Parent message content"))
@@ -247,7 +257,7 @@ class MessageControllerTest {
   void getByIdShouldReturn404WhenMessageNotFound() throws Exception {
     when(service.findByIdWithReplies(parentId)).thenReturn(null);
 
-    mockMvc.perform(get("/messages/{id}", parentId))
+    mockMvc.perform(get("/api/messages/{id}", parentId))
         .andExpect(status().isNotFound());
   }
 
@@ -262,7 +272,7 @@ class MessageControllerTest {
     when(service.createReply(eq(replyId), eq("Nested reply content"), eq(userId)))
         .thenReturn(nestedReply);
 
-    mockMvc.perform(post("/messages/{parentId}/replies", replyId)
+    mockMvc.perform(post("/api/messages/{parentId}/replies", replyId)
             .with(authenticatedJwt())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"content\": \"Nested reply content\"}"))
@@ -281,7 +291,7 @@ class MessageControllerTest {
     when(service.createMessage(eq("New message"), eq("reading-1"), eq(userId)))
         .thenReturn(newMessage);
 
-    mockMvc.perform(post("/messages")
+    mockMvc.perform(post("/api/messages")
             .with(authenticatedJwt())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"content\": \"New message\", \"readingId\": \"reading-1\"}"))
@@ -294,7 +304,7 @@ class MessageControllerTest {
 
   @Test
   void createShouldReturnBadRequestWhenReadingIdMissing() throws Exception {
-    mockMvc.perform(post("/messages")
+    mockMvc.perform(post("/api/messages")
             .with(authenticatedJwt())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"content\": \"New message\"}"))
@@ -303,7 +313,7 @@ class MessageControllerTest {
 
   @Test
   void createShouldReturnBadRequestWhenReadingIdBlank() throws Exception {
-    mockMvc.perform(post("/messages")
+    mockMvc.perform(post("/api/messages")
             .with(authenticatedJwt())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"content\": \"New message\", \"readingId\": \"   \"}"))
@@ -315,7 +325,7 @@ class MessageControllerTest {
     when(service.createMessage(eq("New message"), eq("reading-1"), eq(userId)))
         .thenThrow(new IllegalArgumentException("readingId is required for thread creation"));
 
-    mockMvc.perform(post("/messages")
+    mockMvc.perform(post("/api/messages")
             .with(authenticatedJwt())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"content\": \"New message\", \"readingId\": \"reading-1\"}"))
@@ -324,7 +334,7 @@ class MessageControllerTest {
 
   @Test
   void createShouldReturn401WhenJwtSubjectIsNotUuid() throws Exception {
-    mockMvc.perform(post("/messages")
+    mockMvc.perform(post("/api/messages")
             .with(jwt().jwt(token -> token.subject("invalid-sub")))
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"content\": \"New message\", \"readingId\": \"reading-1\"}"))
@@ -333,7 +343,7 @@ class MessageControllerTest {
 
   @Test
   void createShouldReturn401WhenJwtSubjectIsBlank() throws Exception {
-    mockMvc.perform(post("/messages")
+    mockMvc.perform(post("/api/messages")
             .with(jwt().jwt(token -> token.subject("   ")))
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"content\": \"New message\", \"readingId\": \"reading-1\"}"))
@@ -342,7 +352,7 @@ class MessageControllerTest {
 
   @Test
   void createShouldReturn401WhenJwtSubjectMissing() throws Exception {
-    mockMvc.perform(post("/messages")
+    mockMvc.perform(post("/api/messages")
             .with(jwt().jwt(token -> token.claims(claims -> claims.remove("sub"))))
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"content\": \"New message\", \"readingId\": \"reading-1\"}"))
@@ -351,7 +361,7 @@ class MessageControllerTest {
 
   @Test
   void createShouldReturn401WhenJwtMissing() throws Exception {
-    mockMvc.perform(post("/messages")
+    mockMvc.perform(post("/api/messages")
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"content\": \"New message\", \"readingId\": \"reading-1\"}"))
         .andExpect(status().isUnauthorized());
@@ -362,7 +372,7 @@ class MessageControllerTest {
     List<Message> messages = Arrays.asList(parentMessage, reply);
     when(service.listMessages(null)).thenReturn(messages);
 
-    mockMvc.perform(get("/messages"))
+    mockMvc.perform(get("/api/messages"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.length()").value(2));
 
@@ -373,7 +383,7 @@ class MessageControllerTest {
   void listShouldFilterByReadingId() throws Exception {
     when(service.listMessages("reading-1")).thenReturn(List.of(parentMessage));
 
-    mockMvc.perform(get("/messages").param("readingId", "reading-1"))
+    mockMvc.perform(get("/api/messages").param("readingId", "reading-1"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.length()").value(1))
         .andExpect(jsonPath("$[0].readingId").value("reading-1"));
@@ -391,7 +401,7 @@ class MessageControllerTest {
     when(service.findById(parentId)).thenReturn(parentMessage);
     when(service.updateMessage(eq(parentId), eq(newContent))).thenReturn(updated);
 
-    mockMvc.perform(put("/messages/{id}", parentId)
+    mockMvc.perform(put("/api/messages/{id}", parentId)
             .with(authenticatedJwt())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"content\": \"Updated content\"}"))
@@ -405,7 +415,7 @@ class MessageControllerTest {
   void updateShouldReturn404WhenNotFound() throws Exception {
     when(service.findById(parentId)).thenReturn(null);
 
-    mockMvc.perform(put("/messages/{id}", parentId)
+    mockMvc.perform(put("/api/messages/{id}", parentId)
             .with(authenticatedJwt())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"content\": \"Updated content\"}"))
@@ -419,7 +429,7 @@ class MessageControllerTest {
     ownedByAnotherUser.setUserId(UUID.randomUUID());
     when(service.findById(parentId)).thenReturn(ownedByAnotherUser);
 
-    mockMvc.perform(put("/messages/{id}", parentId)
+    mockMvc.perform(put("/api/messages/{id}", parentId)
             .with(authenticatedJwt())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"content\": \"Updated content\"}"))
@@ -430,7 +440,7 @@ class MessageControllerTest {
 
   @Test
   void updateShouldReturn401WhenJwtMissing() throws Exception {
-    mockMvc.perform(put("/messages/{id}", parentId)
+    mockMvc.perform(put("/api/messages/{id}", parentId)
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"content\": \"Updated content\"}"))
         .andExpect(status().isUnauthorized());
@@ -442,7 +452,7 @@ class MessageControllerTest {
     ownerless.setId(parentId);
     when(service.findById(parentId)).thenReturn(ownerless);
 
-    mockMvc.perform(put("/messages/{id}", parentId)
+    mockMvc.perform(put("/api/messages/{id}", parentId)
             .with(authenticatedJwt())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"content\": \"Updated content\"}"))
@@ -456,7 +466,7 @@ class MessageControllerTest {
     when(service.findById(parentId)).thenReturn(parentMessage);
     when(service.updateMessage(eq(parentId), eq("Updated content"))).thenReturn(null);
 
-    mockMvc.perform(put("/messages/{id}", parentId)
+    mockMvc.perform(put("/api/messages/{id}", parentId)
             .with(authenticatedJwt())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"content\": \"Updated content\"}"))
@@ -467,7 +477,7 @@ class MessageControllerTest {
   void deleteShouldReturn204() throws Exception {
     when(service.findById(parentId)).thenReturn(parentMessage);
 
-    mockMvc.perform(delete("/messages/{id}", parentId)
+    mockMvc.perform(delete("/api/messages/{id}", parentId)
             .with(authenticatedJwt()))
         .andExpect(status().isNoContent());
 
@@ -478,7 +488,7 @@ class MessageControllerTest {
   void deleteShouldReturn404WhenNotFound() throws Exception {
     when(service.findById(parentId)).thenReturn(null);
 
-    mockMvc.perform(delete("/messages/{id}", parentId)
+    mockMvc.perform(delete("/api/messages/{id}", parentId)
             .with(authenticatedJwt()))
         .andExpect(status().isNotFound());
   }
@@ -490,7 +500,7 @@ class MessageControllerTest {
     ownedByAnotherUser.setUserId(UUID.randomUUID());
     when(service.findById(parentId)).thenReturn(ownedByAnotherUser);
 
-    mockMvc.perform(delete("/messages/{id}", parentId)
+    mockMvc.perform(delete("/api/messages/{id}", parentId)
             .with(authenticatedJwt()))
         .andExpect(status().isForbidden());
 
@@ -503,7 +513,7 @@ class MessageControllerTest {
     ownerless.setId(parentId);
     when(service.findById(parentId)).thenReturn(ownerless);
 
-    mockMvc.perform(delete("/messages/{id}", parentId)
+    mockMvc.perform(delete("/api/messages/{id}", parentId)
             .with(authenticatedJwt()))
         .andExpect(status().isForbidden());
 
@@ -512,7 +522,7 @@ class MessageControllerTest {
 
   @Test
   void deleteShouldReturn401WhenJwtMissing() throws Exception {
-    mockMvc.perform(delete("/messages/{id}", parentId))
+    mockMvc.perform(delete("/api/messages/{id}", parentId))
         .andExpect(status().isUnauthorized());
   }
 
@@ -524,7 +534,7 @@ class MessageControllerTest {
 
     when(service.findById(replyId)).thenReturn(orphanReply);
 
-    mockMvc.perform(put("/messages/{parentId}/replies/{replyId}", parentId, replyId)
+    mockMvc.perform(put("/api/messages/{parentId}/replies/{replyId}", parentId, replyId)
             .with(authenticatedJwt())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"content\": \"Updated content\"}"))
@@ -539,7 +549,7 @@ class MessageControllerTest {
 
     when(service.findById(replyId)).thenReturn(orphanReply);
 
-    mockMvc.perform(delete("/messages/{parentId}/replies/{replyId}", parentId, replyId)
+    mockMvc.perform(delete("/api/messages/{parentId}/replies/{replyId}", parentId, replyId)
             .with(authenticatedJwt()))
         .andExpect(status().isNotFound());
   }
@@ -549,7 +559,7 @@ class MessageControllerTest {
     when(service.findById(replyId)).thenReturn(reply);
     when(service.updateMessage(eq(replyId), any())).thenReturn(null);
 
-    mockMvc.perform(put("/messages/{parentId}/replies/{replyId}", parentId, replyId)
+    mockMvc.perform(put("/api/messages/{parentId}/replies/{replyId}", parentId, replyId)
             .with(authenticatedJwt())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"content\": \"Updated content\"}"))
@@ -563,7 +573,7 @@ class MessageControllerTest {
     ownerlessReply.setParent(parentMessage);
     when(service.findById(replyId)).thenReturn(ownerlessReply);
 
-    mockMvc.perform(put("/messages/{parentId}/replies/{replyId}", parentId, replyId)
+    mockMvc.perform(put("/api/messages/{parentId}/replies/{replyId}", parentId, replyId)
             .with(authenticatedJwt())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"content\": \"Updated content\"}"))
@@ -574,7 +584,7 @@ class MessageControllerTest {
 
   @Test
   void updateReplyShouldReturn401WhenJwtMissing() throws Exception {
-    mockMvc.perform(put("/messages/{parentId}/replies/{replyId}", parentId, replyId)
+    mockMvc.perform(put("/api/messages/{parentId}/replies/{replyId}", parentId, replyId)
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"content\": \"Updated content\"}"))
         .andExpect(status().isUnauthorized());
@@ -582,7 +592,7 @@ class MessageControllerTest {
 
   @Test
   void deleteReplyShouldReturn401WhenJwtMissing() throws Exception {
-    mockMvc.perform(delete("/messages/{parentId}/replies/{replyId}", parentId, replyId))
+    mockMvc.perform(delete("/api/messages/{parentId}/replies/{replyId}", parentId, replyId))
         .andExpect(status().isUnauthorized());
   }
 }
