@@ -9,7 +9,6 @@ import id.ac.ui.cs.advprog.beforum.service.ReactionService;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -39,12 +38,7 @@ public class ReactionController {
       @PathVariable UUID messageId,
       @RequestBody ReactionRequest req) {
     return requestHandler.withAuthenticatedUuid(jwt, userId -> {
-      Reaction reaction;
-      try {
-        reaction = service.addReaction(messageId, userId, req.reactionType());
-      } catch (IllegalStateException e) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).build();
-      }
+      Reaction reaction = service.addReaction(messageId, userId, req.reactionType());
       if (reaction == null) {
         return ResponseEntity.notFound().build();
       }

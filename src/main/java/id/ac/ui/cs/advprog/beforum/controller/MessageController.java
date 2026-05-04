@@ -56,12 +56,8 @@ public class MessageController {
         return ResponseEntity.badRequest().build();
       }
 
-      try {
-        Message created = service.createMessage(req.content(), req.readingId(), userId);
-        return ResponseEntity.ok(responseMapper.toResponse(created));
-      } catch (IllegalArgumentException ex) {
-        return ResponseEntity.badRequest().build();
-      }
+      Message created = service.createMessage(req.content(), req.readingId(), userId);
+      return ResponseEntity.ok(responseMapper.toResponse(created));
     });
   }
 
