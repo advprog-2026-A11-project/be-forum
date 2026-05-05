@@ -77,15 +77,18 @@ public class MessageReplyController {
           authorizationService.isReplyOfParent(reply, parentId),
           HttpStatus.NOT_FOUND,
           () -> requestHandler.require(
-              authorizationService.isOwner(reply, userId),
+              !requestHandler.isAdmin(jwt),
               HttpStatus.FORBIDDEN,
-              () -> {
-                Message updated = service.updateMessage(replyId, req.content());
-                if (updated == null) {
-                  return ResponseEntity.notFound().build();
-                }
-                return ResponseEntity.ok(responseMapper.toResponse(updated));
-              }));
+              () -> requestHandler.require(
+                  authorizationService.isOwner(reply, userId),
+                  HttpStatus.FORBIDDEN,
+                  () -> {
+                    Message updated = service.updateMessage(replyId, req.content());
+                    if (updated == null) {
+                      return ResponseEntity.notFound().build();
+                    }
+                    return ResponseEntity.ok(responseMapper.toResponse(updated));
+                  })));
     });
   }
 
@@ -100,7 +103,7 @@ public class MessageReplyController {
           authorizationService.isReplyOfParent(reply, parentId),
           HttpStatus.NOT_FOUND,
           () -> requestHandler.require(
-              authorizationService.isOwner(reply, userId),
+              authorizationService.isOwner(reply, userId) || requestHandler.isAdmin(jwt),
               HttpStatus.FORBIDDEN,
               () -> {
                 service.deleteMessage(replyId);

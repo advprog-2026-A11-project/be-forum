@@ -59,7 +59,7 @@ class ReactionControllerTest {
   private UUID userId;
 
   private RequestPostProcessor authenticatedJwt() {
-    return jwt().jwt(token -> token.subject(userId.toString()));
+    return jwt().jwt(token -> token.claim("yomu_user_id", userId.toString()));
   }
 
   @BeforeEach
@@ -135,9 +135,9 @@ class ReactionControllerTest {
   }
 
   @Test
-  void addReactionShouldReturn401WhenJwtSubjectBlank() throws Exception {
+  void addReactionShouldReturn401WhenYomuUserIdBlank() throws Exception {
     mockMvc.perform(post("/api/messages/{messageId}/reactions", messageId)
-            .with(jwt().jwt(token -> token.subject("   ")))
+            .with(jwt().jwt(token -> token.claim("yomu_user_id", "   ")))
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"reactionType\": \"UPVOTE\"}"))
         .andExpect(status().isUnauthorized());
@@ -146,9 +146,9 @@ class ReactionControllerTest {
   }
 
   @Test
-  void addReactionShouldReturn401WhenJwtSubjectMissing() throws Exception {
+  void addReactionShouldReturn401WhenYomuUserIdMissing() throws Exception {
     mockMvc.perform(post("/api/messages/{messageId}/reactions", messageId)
-            .with(jwt().jwt(token -> token.claims(claims -> claims.remove("sub"))))
+            .with(jwt().jwt(token -> token.claims(claims -> claims.remove("yomu_user_id"))))
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"reactionType\": \"UPVOTE\"}"))
         .andExpect(status().isUnauthorized());
@@ -218,9 +218,9 @@ class ReactionControllerTest {
   }
 
   @Test
-  void removeReactionShouldReturn401WhenJwtSubjectBlank() throws Exception {
+  void removeReactionShouldReturn401WhenYomuUserIdBlank() throws Exception {
     mockMvc.perform(delete("/api/messages/{messageId}/reactions", messageId)
-            .with(jwt().jwt(token -> token.subject("   ")))
+            .with(jwt().jwt(token -> token.claim("yomu_user_id", "   ")))
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"reactionType\": \"UPVOTE\"}"))
         .andExpect(status().isUnauthorized());
@@ -229,9 +229,9 @@ class ReactionControllerTest {
   }
 
   @Test
-  void removeReactionShouldReturn401WhenJwtSubjectMissing() throws Exception {
+  void removeReactionShouldReturn401WhenYomuUserIdMissing() throws Exception {
     mockMvc.perform(delete("/api/messages/{messageId}/reactions", messageId)
-            .with(jwt().jwt(token -> token.claims(claims -> claims.remove("sub"))))
+            .with(jwt().jwt(token -> token.claims(claims -> claims.remove("yomu_user_id"))))
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"reactionType\": \"UPVOTE\"}"))
         .andExpect(status().isUnauthorized());

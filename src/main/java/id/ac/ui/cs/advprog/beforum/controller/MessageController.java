@@ -85,15 +85,18 @@ public class MessageController {
       Message found = service.findById(id);
       return requestHandler.require(found != null, HttpStatus.NOT_FOUND, () ->
           requestHandler.require(
-              authorizationService.isOwner(found, userId),
+              !requestHandler.isAdmin(jwt),
               HttpStatus.FORBIDDEN,
-              () -> {
-                Message updated = service.updateMessage(id, req.content());
-                if (updated == null) {
-                  return ResponseEntity.notFound().build();
-                }
-                return ResponseEntity.ok(responseMapper.toResponse(updated));
-              }));
+              () -> requestHandler.require(
+                  authorizationService.isOwner(found, userId),
+                  HttpStatus.FORBIDDEN,
+                  () -> {
+                    Message updated = service.updateMessage(id, req.content());
+                    if (updated == null) {
+                      return ResponseEntity.notFound().build();
+                    }
+                    return ResponseEntity.ok(responseMapper.toResponse(updated));
+                  })));
     });
   }
 
@@ -105,7 +108,7 @@ public class MessageController {
       Message found = service.findById(id);
       return requestHandler.require(found != null, HttpStatus.NOT_FOUND, () ->
           requestHandler.require(
-              authorizationService.isOwner(found, userId),
+              authorizationService.isOwner(found, userId) || requestHandler.isAdmin(jwt),
               HttpStatus.FORBIDDEN,
               () -> {
                 service.deleteMessage(id);
