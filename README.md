@@ -11,8 +11,9 @@ Required auth integration env:
 Write operations (`POST`/`PUT`/`DELETE`) on `/api/messages`
 and `/api/messages/{messageId}/reactions` require
 a Supabase Bearer access token. The backend verifies the token against
-`<SUPABASE_URL>/auth/v1/.well-known/jwks.json`, reads user id from `sub`, stores that id on
-create, and only allows update/delete when the token user matches the owner.
+`<SUPABASE_URL>/auth/v1/.well-known/jwks.json`, reads user id from `yomu_user_id`, stores that
+id on create, allows update only when the token user matches the owner, and allows delete for
+owners or users with `user_role=ADMIN`.
 
 ```bash
 docker compose up --build -d

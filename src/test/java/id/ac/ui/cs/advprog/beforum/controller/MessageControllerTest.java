@@ -65,7 +65,13 @@ class MessageControllerTest {
   private UUID userId;
 
   private RequestPostProcessor authenticatedJwt() {
-    return jwt().jwt(token -> token.subject(userId.toString()));
+    return jwt().jwt(token -> token.claim("yomu_user_id", userId.toString()));
+  }
+
+  private RequestPostProcessor authenticatedAdminJwt() {
+    return jwt().jwt(token -> token
+        .claim("yomu_user_id", UUID.randomUUID().toString())
+        .claim("user_role", "ADMIN"));
   }
 
   @BeforeEach
@@ -196,11 +202,39 @@ class MessageControllerTest {
   }
 
   @Test
+  void updateReplyShouldReturn403WhenUserIsAdmin() throws Exception {
+    when(service.findById(replyId)).thenReturn(reply);
+
+    mockMvc.perform(put("/api/messages/{parentId}/replies/{replyId}", parentId, replyId)
+            .with(authenticatedAdminJwt())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"content\": \"Updated reply content\"}"))
+        .andExpect(status().isForbidden());
+
+    verify(service, never()).updateMessage(any(UUID.class), any(String.class));
+  }
+
+  @Test
   void deleteReplyShouldReturn204() throws Exception {
     when(service.findById(replyId)).thenReturn(reply);
 
     mockMvc.perform(delete("/api/messages/{parentId}/replies/{replyId}", parentId, replyId)
             .with(authenticatedJwt()))
+        .andExpect(status().isNoContent());
+
+    verify(service).deleteMessage(replyId);
+  }
+
+  @Test
+  void deleteReplyShouldReturn204WhenUserIsAdmin() throws Exception {
+    Message ownedByAnotherUser = new Message();
+    ownedByAnotherUser.setId(replyId);
+    ownedByAnotherUser.setUserId(UUID.randomUUID());
+    ownedByAnotherUser.setParent(parentMessage);
+    when(service.findById(replyId)).thenReturn(ownedByAnotherUser);
+
+    mockMvc.perform(delete("/api/messages/{parentId}/replies/{replyId}", parentId, replyId)
+            .with(authenticatedAdminJwt()))
         .andExpect(status().isNoContent());
 
     verify(service).deleteMessage(replyId);
@@ -333,27 +367,27 @@ class MessageControllerTest {
   }
 
   @Test
-  void createShouldReturn401WhenJwtSubjectIsNotUuid() throws Exception {
+  void createShouldReturn401WhenYomuUserIdIsNotUuid() throws Exception {
     mockMvc.perform(post("/api/messages")
-            .with(jwt().jwt(token -> token.subject("invalid-sub")))
+            .with(jwt().jwt(token -> token.claim("yomu_user_id", "invalid-sub")))
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"content\": \"New message\", \"readingId\": \"reading-1\"}"))
         .andExpect(status().isUnauthorized());
   }
 
   @Test
-  void createShouldReturn401WhenJwtSubjectIsBlank() throws Exception {
+  void createShouldReturn401WhenYomuUserIdIsBlank() throws Exception {
     mockMvc.perform(post("/api/messages")
-            .with(jwt().jwt(token -> token.subject("   ")))
+            .with(jwt().jwt(token -> token.claim("yomu_user_id", "   ")))
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"content\": \"New message\", \"readingId\": \"reading-1\"}"))
         .andExpect(status().isUnauthorized());
   }
 
   @Test
-  void createShouldReturn401WhenJwtSubjectMissing() throws Exception {
+  void createShouldReturn401WhenYomuUserIdMissing() throws Exception {
     mockMvc.perform(post("/api/messages")
-            .with(jwt().jwt(token -> token.claims(claims -> claims.remove("sub"))))
+            .with(jwt().jwt(token -> token.claims(claims -> claims.remove("yomu_user_id"))))
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"content\": \"New message\", \"readingId\": \"reading-1\"}"))
         .andExpect(status().isUnauthorized());
@@ -439,6 +473,19 @@ class MessageControllerTest {
   }
 
   @Test
+  void updateShouldReturn403WhenUserIsAdmin() throws Exception {
+    when(service.findById(parentId)).thenReturn(parentMessage);
+
+    mockMvc.perform(put("/api/messages/{id}", parentId)
+            .with(authenticatedAdminJwt())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"content\": \"Updated content\"}"))
+        .andExpect(status().isForbidden());
+
+    verify(service, never()).updateMessage(any(UUID.class), any(String.class));
+  }
+
+  @Test
   void updateShouldReturn401WhenJwtMissing() throws Exception {
     mockMvc.perform(put("/api/messages/{id}", parentId)
             .contentType(MediaType.APPLICATION_JSON)
@@ -479,6 +526,20 @@ class MessageControllerTest {
 
     mockMvc.perform(delete("/api/messages/{id}", parentId)
             .with(authenticatedJwt()))
+        .andExpect(status().isNoContent());
+
+    verify(service).deleteMessage(parentId);
+  }
+
+  @Test
+  void deleteShouldReturn204WhenUserIsAdmin() throws Exception {
+    Message ownedByAnotherUser = new Message();
+    ownedByAnotherUser.setId(parentId);
+    ownedByAnotherUser.setUserId(UUID.randomUUID());
+    when(service.findById(parentId)).thenReturn(ownedByAnotherUser);
+
+    mockMvc.perform(delete("/api/messages/{id}", parentId)
+            .with(authenticatedAdminJwt()))
         .andExpect(status().isNoContent());
 
     verify(service).deleteMessage(parentId);

@@ -32,7 +32,7 @@ class MessageControllerUnitTest {
   @Test
   void createShouldReturnBadRequestWhenRequestBodyIsNull() {
     Jwt jwt = mock(Jwt.class);
-    when(jwt.getSubject()).thenReturn(UUID.randomUUID().toString());
+    when(jwt.getClaimAsString("yomu_user_id")).thenReturn(UUID.randomUUID().toString());
 
     ResponseEntity<MessageResponse> response = controller().create(jwt, null);
 
@@ -43,7 +43,7 @@ class MessageControllerUnitTest {
   @Test
   void createShouldReturnUnauthorizedWhenJwtSubjectIsNull() {
     Jwt jwt = mock(Jwt.class);
-    when(jwt.getSubject()).thenReturn(null);
+    when(jwt.getClaimAsString("yomu_user_id")).thenReturn(null);
 
     ResponseEntity<MessageResponse> response = controller().create(
         jwt,

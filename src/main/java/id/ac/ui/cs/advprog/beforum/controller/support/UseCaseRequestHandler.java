@@ -11,6 +11,10 @@ import org.springframework.stereotype.Component;
 @Component
 public class UseCaseRequestHandler {
 
+  private static final String USER_ID_CLAIM = "yomu_user_id";
+  private static final String USER_ROLE_CLAIM = "user_role";
+  private static final String ADMIN_ROLE = "ADMIN";
+
   public UseCaseRequestHandler() {
   }
 
@@ -31,13 +35,26 @@ public class UseCaseRequestHandler {
     return onSuccess.get();
   }
 
+  public boolean isAdmin(Jwt jwt) {
+    if (jwt == null) {
+      return false;
+    }
+    String userRole = jwt.getClaimAsString(USER_ROLE_CLAIM);
+    return ADMIN_ROLE.equals(userRole);
+  }
+
   private UUID extractUserId(Jwt jwt) {
-    if (jwt == null || jwt.getSubject() == null || jwt.getSubject().isBlank()) {
+    if (jwt == null) {
+      return null;
+    }
+
+    String userIdClaim = jwt.getClaimAsString(USER_ID_CLAIM);
+    if (userIdClaim == null || userIdClaim.isBlank()) {
       return null;
     }
 
     try {
-      return UUID.fromString(jwt.getSubject());
+      return UUID.fromString(userIdClaim);
     } catch (IllegalArgumentException ex) {
       return null;
     }
