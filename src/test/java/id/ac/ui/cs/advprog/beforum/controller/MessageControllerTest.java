@@ -15,10 +15,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import id.ac.ui.cs.advprog.beforum.controller.support.MessageAuthorizationService;
+import id.ac.ui.cs.advprog.beforum.controller.support.MessageAuthorizationValidator;
 import id.ac.ui.cs.advprog.beforum.controller.support.MessageRequestValidator;
 import id.ac.ui.cs.advprog.beforum.controller.support.MessageResponseMapper;
-import id.ac.ui.cs.advprog.beforum.controller.support.UseCaseRequestHandler;
 import id.ac.ui.cs.advprog.beforum.model.Message;
+import id.ac.ui.cs.advprog.beforum.security.JwtUserExtractor;
+import id.ac.ui.cs.advprog.beforum.security.RoleAuthorizationService;
 import id.ac.ui.cs.advprog.beforum.security.SecurityConfig;
 import id.ac.ui.cs.advprog.beforum.service.MessageService;
 import java.time.OffsetDateTime;
@@ -39,9 +41,11 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 @WebMvcTest({MessageController.class, MessageReplyController.class})
 @Import({
     SecurityConfig.class,
-    UseCaseRequestHandler.class,
-    MessageRequestValidator.class,
+    JwtUserExtractor.class,
+    RoleAuthorizationService.class,
     MessageAuthorizationService.class,
+    MessageAuthorizationValidator.class,
+    MessageRequestValidator.class,
     MessageResponseMapper.class
 })
 class MessageControllerTest {

@@ -1,0 +1,46 @@
+package id.ac.ui.cs.advprog.beforum.controller.support;
+
+import id.ac.ui.cs.advprog.beforum.exception.UnauthorizedException;
+import id.ac.ui.cs.advprog.beforum.model.Message;
+import id.ac.ui.cs.advprog.beforum.security.RoleAuthorizationService;
+import java.util.UUID;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.stereotype.Component;
+
+@Component
+public class MessageAuthorizationValidator {
+
+  private final MessageAuthorizationService authService;
+  private final RoleAuthorizationService roleService;
+
+  public MessageAuthorizationValidator(
+      MessageAuthorizationService authService,
+      RoleAuthorizationService roleService) {
+    this.authService = authService;
+    this.roleService = roleService;
+  }
+
+  public void validateCanUpdate(Message message, UUID userId, Jwt jwt)
+      throws UnauthorizedException {
+    // Admins cannot update messages (only owners can)
+    if (roleService.isAdmin(jwt)) {
+      throw new UnauthorizedException("Admins cannot update messages");
+    }
+    // Non-admin must be owner
+    if (!authService.isOwner(message, userId)) {
+      throw new UnauthorizedException("Only message owner can update");
+    }
+  }
+
+  public void validateCanDelete(Message message, UUID userId, Jwt jwt)
+      throws UnauthorizedException {
+    // Admins can delete anything
+    if (roleService.isAdmin(jwt)) {
+      return;
+    }
+    // Non-admin must be owner
+    if (!authService.isOwner(message, userId)) {
+      throw new UnauthorizedException("Only message owner or admin can delete");
+    }
+  }
+}

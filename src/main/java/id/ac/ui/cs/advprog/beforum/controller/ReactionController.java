@@ -1,14 +1,15 @@
 package id.ac.ui.cs.advprog.beforum.controller;
 
-import id.ac.ui.cs.advprog.beforum.controller.support.UseCaseRequestHandler;
 import id.ac.ui.cs.advprog.beforum.dto.ReactionRequest;
 import id.ac.ui.cs.advprog.beforum.dto.ReactionResponse;
 import id.ac.ui.cs.advprog.beforum.model.Reaction;
 import id.ac.ui.cs.advprog.beforum.model.ReactionType;
+import id.ac.ui.cs.advprog.beforum.security.JwtUserExtractor;
 import id.ac.ui.cs.advprog.beforum.service.ReactionService;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -25,11 +26,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class ReactionController {
 
   private final ReactionService service;
-  private final UseCaseRequestHandler requestHandler;
+  private final JwtUserExtractor userExtractor;
 
-  public ReactionController(ReactionService service, UseCaseRequestHandler requestHandler) {
+  public ReactionController(ReactionService service, JwtUserExtractor userExtractor) {
     this.service = service;
-    this.requestHandler = requestHandler;
+    this.userExtractor = userExtractor;
   }
 
   @PostMapping
@@ -37,13 +38,16 @@ public class ReactionController {
       @AuthenticationPrincipal Jwt jwt,
       @PathVariable UUID messageId,
       @RequestBody ReactionRequest req) {
-    return requestHandler.withAuthenticatedUuid(jwt, userId -> {
-      Reaction reaction = service.addReaction(messageId, userId, req.reactionType());
-      if (reaction == null) {
-        return ResponseEntity.notFound().build();
-      }
-      return ResponseEntity.ok(toResponse(reaction));
-    });
+    UUID userId = userExtractor.extractUserId(jwt);
+    if (userId == null) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+
+    Reaction reaction = service.addReaction(messageId, userId, req.reactionType());
+    if (reaction == null) {
+      return ResponseEntity.notFound().build();
+    }
+    return ResponseEntity.ok(toResponse(reaction));
   }
 
   @DeleteMapping
@@ -51,13 +55,16 @@ public class ReactionController {
       @AuthenticationPrincipal Jwt jwt,
       @PathVariable UUID messageId,
       @RequestBody ReactionRequest req) {
-    return requestHandler.withAuthenticatedUuid(jwt, userId -> {
-      boolean removed = service.removeReaction(messageId, userId, req.reactionType());
-      if (!removed) {
-        return ResponseEntity.notFound().build();
-      }
-      return ResponseEntity.noContent().build();
-    });
+    UUID userId = userExtractor.extractUserId(jwt);
+    if (userId == null) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+
+    boolean removed = service.removeReaction(messageId, userId, req.reactionType());
+    if (!removed) {
+      return ResponseEntity.notFound().build();
+    }
+    return ResponseEntity.noContent().build();
   }
 
   @GetMapping
