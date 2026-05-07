@@ -22,13 +22,11 @@ public class MessageAuthorizationValidator {
 
   public void validateCanUpdate(Message message, UUID userId, Jwt jwt)
       throws UnauthorizedException {
-    // Admins cannot update messages (only owners can)
     if (roleService.isAdmin(jwt)) {
-      throw new UnauthorizedException("Admins cannot update messages");
+      throw new UnauthorizedException("You're not allowed to edit this message");
     }
-    // Non-admin must be owner
     if (!authService.isOwner(message, userId)) {
-      throw new UnauthorizedException("Only message owner can update");
+      throw new UnauthorizedException("You're not allowed to edit this message");
     }
   }
 
@@ -38,9 +36,9 @@ public class MessageAuthorizationValidator {
     if (roleService.isAdmin(jwt)) {
       return;
     }
-    // Non-admin must be owner
+
     if (!authService.isOwner(message, userId)) {
-      throw new UnauthorizedException("Only message owner or admin can delete");
+      throw new UnauthorizedException("You're not allowed to delete this message");
     }
   }
 }
