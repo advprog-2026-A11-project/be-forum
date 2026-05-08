@@ -24,7 +24,7 @@ public interface MessageRepository extends JpaRepository<Message, UUID> {
           SELECT m FROM Message m
           WHERE m.parent IS NULL AND m.readingId = :readingId
           ORDER BY m.createdAt DESC
-          """)
+      """)
   List<Message> findTopLevelByReadingIdOrderByCreatedAtDesc(@Param("readingId") String readingId);
 
   @EntityGraph(attributePaths = {"replies"})
