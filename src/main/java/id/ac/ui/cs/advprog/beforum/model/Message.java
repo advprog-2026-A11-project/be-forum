@@ -9,6 +9,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +29,10 @@ public class Message {
   @Id
   @Column(name = "id", updatable = false, nullable = false)
   private UUID id = UUID.randomUUID();
+
+  @Version
+  @Column(name = "version")
+  private Integer version;
 
   @Column(name = "content", nullable = false, columnDefinition = "TEXT")
   private String content;

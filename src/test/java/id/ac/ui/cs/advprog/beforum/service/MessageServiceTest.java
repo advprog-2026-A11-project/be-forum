@@ -278,7 +278,7 @@ class MessageServiceTest {
   @Test
   void findByIdWithRepliesShouldReturnMessageWithReplies() {
     parentMessage.getReplies().add(reply);
-    when(repository.findById(parentId)).thenReturn(Optional.of(parentMessage));
+    when(repository.findByIdWithReplies(parentId)).thenReturn(Optional.of(parentMessage));
 
     Message result = service.findByIdWithReplies(parentId);
 
@@ -290,7 +290,7 @@ class MessageServiceTest {
   @Test
   void findByIdWithRepliesShouldReturnNullWhenNotFound() {
     UUID nonExistentId = UUID.randomUUID();
-    when(repository.findById(nonExistentId)).thenReturn(Optional.empty());
+    when(repository.findByIdWithReplies(nonExistentId)).thenReturn(Optional.empty());
 
     Message result = service.findByIdWithReplies(nonExistentId);
 
@@ -307,7 +307,7 @@ class MessageServiceTest {
     reply.getReplies().add(nestedReply);
     parentMessage.getReplies().add(reply);
 
-    when(repository.findById(parentId)).thenReturn(Optional.of(parentMessage));
+    when(repository.findByIdWithReplies(parentId)).thenReturn(Optional.of(parentMessage));
 
     Message result = service.findByIdWithReplies(parentId);
 
@@ -323,7 +323,7 @@ class MessageServiceTest {
     messageWithNullReplies.setContent("Message without replies");
     messageWithNullReplies.setReplies(null);
 
-    when(repository.findById(messageWithNullReplies.getId())).thenReturn(
+    when(repository.findByIdWithReplies(messageWithNullReplies.getId())).thenReturn(
         Optional.of(messageWithNullReplies));
 
     Message result = service.findByIdWithReplies(messageWithNullReplies.getId());

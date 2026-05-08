@@ -8,11 +8,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import id.ac.ui.cs.advprog.beforum.controller.support.MessageAuthorizationService;
+import id.ac.ui.cs.advprog.beforum.controller.support.MessageAuthorizationValidator;
 import id.ac.ui.cs.advprog.beforum.controller.support.MessageRequestValidator;
 import id.ac.ui.cs.advprog.beforum.controller.support.MessageResponseMapper;
-import id.ac.ui.cs.advprog.beforum.controller.support.UseCaseRequestHandler;
 import id.ac.ui.cs.advprog.beforum.dto.CreateMessageRequest;
 import id.ac.ui.cs.advprog.beforum.dto.MessageResponse;
+import id.ac.ui.cs.advprog.beforum.security.JwtUserExtractor;
 import id.ac.ui.cs.advprog.beforum.service.MessageService;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -56,9 +57,11 @@ class MessageControllerUnitTest {
   private MessageController controller() {
     return new MessageController(
         service,
-        new UseCaseRequestHandler(),
+        new JwtUserExtractor(),
         new MessageRequestValidator(),
-        new MessageAuthorizationService(),
+        new MessageAuthorizationValidator(
+            new MessageAuthorizationService(),
+            mock()),
         new MessageResponseMapper());
   }
 }
