@@ -26,6 +26,10 @@ repositories {
     mavenCentral()
 }
 
+dependencyLocking {
+    lockAllConfigurations()
+}
+
 sonarqube {
     properties {
         property("sonar.projectKey", "advprog-2026-A11-project_be-forum")
