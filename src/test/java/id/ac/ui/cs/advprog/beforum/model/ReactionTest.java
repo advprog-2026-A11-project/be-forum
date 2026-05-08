@@ -33,7 +33,7 @@ class ReactionTest {
     Reaction reaction = new Reaction();
     reaction.setId(UUID.randomUUID());
     reaction.setReactionType(ReactionType.UPVOTE);
-    reaction.setUserId("user123");
+    reaction.setUserId(UUID.randomUUID());
 
     assertNull(reaction.getMessageId());
   }
@@ -48,7 +48,7 @@ class ReactionTest {
     Reaction reaction = new Reaction();
     reaction.setId(UUID.randomUUID());
     reaction.setReactionType(ReactionType.UPVOTE);
-    reaction.setUserId("user123");
+    reaction.setUserId(UUID.randomUUID());
     reaction.setMessage(message);
 
     assertEquals(messageId, reaction.getMessageId());
@@ -65,9 +65,10 @@ class ReactionTest {
   @Test
   void userIdShouldBeSetCorrectly() {
     Reaction reaction = new Reaction();
-    reaction.setUserId("user456");
+    UUID userId = UUID.randomUUID();
+    reaction.setUserId(userId);
 
-    assertEquals("user456", reaction.getUserId());
+    assertEquals(userId, reaction.getUserId());
   }
 
   @Test
@@ -76,11 +77,12 @@ class ReactionTest {
     OffsetDateTime createdAt = OffsetDateTime.now();
     Message message = new Message();
 
-    Reaction reaction = new Reaction(id, ReactionType.ROCKET, "user789", createdAt, message);
+    UUID userId = UUID.randomUUID();
+    Reaction reaction = new Reaction(id, ReactionType.ROCKET, userId, createdAt, message);
 
     assertEquals(id, reaction.getId());
     assertEquals(ReactionType.ROCKET, reaction.getReactionType());
-    assertEquals("user789", reaction.getUserId());
+    assertEquals(userId, reaction.getUserId());
     assertEquals(createdAt, reaction.getCreatedAt());
     assertEquals(message, reaction.getMessage());
   }

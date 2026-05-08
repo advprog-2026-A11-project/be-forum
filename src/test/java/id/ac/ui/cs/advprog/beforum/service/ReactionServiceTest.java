@@ -16,6 +16,8 @@ import id.ac.ui.cs.advprog.beforum.model.Reaction;
 import id.ac.ui.cs.advprog.beforum.model.ReactionType;
 import id.ac.ui.cs.advprog.beforum.repository.MessageRepository;
 import id.ac.ui.cs.advprog.beforum.repository.ReactionRepository;
+import id.ac.ui.cs.advprog.beforum.service.reaction.NonExclusiveReactionBehavior;
+import id.ac.ui.cs.advprog.beforum.service.reaction.ReactionBehaviorRegistry;
 import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.List;
@@ -25,7 +27,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -38,20 +39,20 @@ class ReactionServiceTest {
   @Mock
   private MessageRepository messageRepository;
 
-  @InjectMocks
   private ReactionService service;
+  private ReactionBehaviorRegistry behaviorRegistry;
 
   private Message message;
   private Reaction reaction;
   private UUID messageId;
   private UUID reactionId;
-  private String userId;
+  private UUID userId;
 
   @BeforeEach
   void setUp() {
     messageId = UUID.randomUUID();
     reactionId = UUID.randomUUID();
-    userId = "user123";
+    userId = UUID.randomUUID();
 
     message = new Message();
     message.setId(messageId);
@@ -64,6 +65,12 @@ class ReactionServiceTest {
     reaction.setUserId(userId);
     reaction.setMessage(message);
     reaction.setCreatedAt(OffsetDateTime.now());
+
+    // Create real behavior registry with real behavior implementations
+    NonExclusiveReactionBehavior nonExclusiveReactionBehavior = new NonExclusiveReactionBehavior();
+    behaviorRegistry = new ReactionBehaviorRegistry(nonExclusiveReactionBehavior);
+    
+    service = new ReactionService(reactionRepository, messageRepository, behaviorRegistry);
   }
 
   @Test
@@ -96,16 +103,19 @@ class ReactionServiceTest {
   }
 
   @Test
-  void addReactionShouldThrowWhenDuplicate() {
+  void addReactionShouldToggleWhenDuplicate() {
     when(messageRepository.findById(messageId)).thenReturn(Optional.of(message));
     when(reactionRepository.findByMessageIdAndUserIdAndReactionType(
         messageId, userId, ReactionType.UPVOTE
     )).thenReturn(Optional.of(reaction));
+    when(reactionRepository.findByMessageIdAndUserIdAndReactionType(
+        messageId, userId, ReactionType.DOWNVOTE
+    )).thenReturn(Optional.empty());
 
-    assertThrows(
-        IllegalStateException.class,
-        () -> service.addReaction(messageId, userId, ReactionType.UPVOTE)
-    );
+    Reaction result = service.addReaction(messageId, userId, ReactionType.UPVOTE);
+
+    assertNull(result);  // Toggle removes it, returns null
+    verify(reactionRepository).delete(reaction);
     verify(reactionRepository, never()).save(any(Reaction.class));
   }
 
@@ -190,7 +200,7 @@ class ReactionServiceTest {
     Reaction reaction2 = new Reaction();
     reaction2.setId(UUID.randomUUID());
     reaction2.setReactionType(ReactionType.FIRE);
-    reaction2.setUserId("user456");
+    reaction2.setUserId(UUID.randomUUID());
     reaction2.setMessage(message);
 
     List<Reaction> reactions = Arrays.asList(reaction, reaction2);

@@ -5,6 +5,7 @@ import id.ac.ui.cs.advprog.beforum.model.Reaction;
 import id.ac.ui.cs.advprog.beforum.model.ReactionType;
 import id.ac.ui.cs.advprog.beforum.repository.MessageRepository;
 import id.ac.ui.cs.advprog.beforum.repository.ReactionRepository;
+import id.ac.ui.cs.advprog.beforum.service.reaction.ReactionBehaviorRegistry;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -18,43 +19,33 @@ public class ReactionService {
 
   private final ReactionRepository reactionRepository;
   private final MessageRepository messageRepository;
+  private final ReactionBehaviorRegistry behaviorRegistry;
 
   public ReactionService(ReactionRepository reactionRepository,
-                         MessageRepository messageRepository) {
+                         MessageRepository messageRepository,
+                         ReactionBehaviorRegistry behaviorRegistry) {
     this.reactionRepository = reactionRepository;
     this.messageRepository = messageRepository;
+    this.behaviorRegistry = behaviorRegistry;
   }
 
   @Transactional
-  public Reaction addReaction(UUID messageId, String userId, ReactionType reactionType) {
+  public Reaction addReaction(UUID messageId, UUID userId, ReactionType reactionType) {
     Optional<Message> messageOpt = messageRepository.findById(messageId);
     if (messageOpt.isEmpty()) {
       return null;
     }
 
-    // Check if user already has this reaction on this message
-    Optional<Reaction> existingReaction =
-        reactionRepository.findByMessageIdAndUserIdAndReactionType(
-            messageId,
-            userId,
-            reactionType
-        );
-    if (existingReaction.isPresent()) {
-      throw new IllegalStateException("User has already given this reaction");
+    // Use strategy pattern to handle type-specific behavior
+    var behavior = behaviorRegistry.getBehavior(reactionType);
+    boolean shouldAdd = behavior.beforeAdd(messageId, userId, reactionType, reactionRepository);
+
+    // If behavior returns false, reaction was toggled off (deleted)
+    if (!shouldAdd) {
+      return null;
     }
 
-    // For upvote/downvote, remove any existing vote before adding new one
-    if (reactionType == ReactionType.UPVOTE || reactionType == ReactionType.DOWNVOTE) {
-      ReactionType oppositeVote = reactionType == ReactionType.UPVOTE
-          ? ReactionType.DOWNVOTE
-          : ReactionType.UPVOTE;
-      reactionRepository.findByMessageIdAndUserIdAndReactionType(
-          messageId,
-          userId,
-          oppositeVote
-      ).ifPresent(reactionRepository::delete);
-    }
-
+    // Add the new reaction
     Reaction reaction = new Reaction();
     reaction.setReactionType(reactionType);
     reaction.setUserId(userId);
@@ -64,7 +55,7 @@ public class ReactionService {
 
   @Transactional
   public boolean removeReaction(UUID messageId,
-                                String userId,
+                                UUID userId,
                                 ReactionType reactionType) {
     Optional<Reaction> existingReaction =
         reactionRepository.findByMessageIdAndUserIdAndReactionType(
@@ -84,7 +75,7 @@ public class ReactionService {
   }
 
   @Transactional(readOnly = true)
-  public List<Reaction> getUserReactionsOnMessage(UUID messageId, String userId) {
+  public List<Reaction> getUserReactionsOnMessage(UUID messageId, UUID userId) {
     return reactionRepository.findByMessageIdAndUserId(
         messageId,
         userId

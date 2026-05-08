@@ -1,12 +1,18 @@
 package id.ac.ui.cs.advprog.beforum.controller;
 
+import id.ac.ui.cs.advprog.beforum.dto.ReactionRequest;
+import id.ac.ui.cs.advprog.beforum.dto.ReactionResponse;
 import id.ac.ui.cs.advprog.beforum.model.Reaction;
 import id.ac.ui.cs.advprog.beforum.model.ReactionType;
+import id.ac.ui.cs.advprog.beforum.security.JwtUserExtractor;
 import id.ac.ui.cs.advprog.beforum.service.ReactionService;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,39 +22,45 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping({"/messages/{messageId}/reactions", "/api/messages/{messageId}/reactions"})
+@RequestMapping("/api/messages/{messageId}/reactions")
 public class ReactionController {
 
   private final ReactionService service;
+  private final JwtUserExtractor userExtractor;
 
-  public ReactionController(ReactionService service) {
+  public ReactionController(ReactionService service, JwtUserExtractor userExtractor) {
     this.service = service;
-  }
-
-  public static record ReactionRequest(String userId, ReactionType reactionType) {
+    this.userExtractor = userExtractor;
   }
 
   @PostMapping
-  public ResponseEntity<Reaction> addReaction(
+  public ResponseEntity<ReactionResponse> addReaction(
+      @AuthenticationPrincipal Jwt jwt,
       @PathVariable UUID messageId,
       @RequestBody ReactionRequest req) {
-    Reaction reaction;
-    try {
-      reaction = service.addReaction(messageId, req.userId(), req.reactionType());
-    } catch (IllegalStateException e) {
-      return ResponseEntity.status(409).build();
+    UUID userId = userExtractor.extractUserId(jwt);
+    if (userId == null) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
+
+    Reaction reaction = service.addReaction(messageId, userId, req.reactionType());
     if (reaction == null) {
       return ResponseEntity.notFound().build();
     }
-    return ResponseEntity.ok(reaction);
+    return ResponseEntity.ok(toResponse(reaction));
   }
 
   @DeleteMapping
   public ResponseEntity<Void> removeReaction(
+      @AuthenticationPrincipal Jwt jwt,
       @PathVariable UUID messageId,
       @RequestBody ReactionRequest req) {
-    boolean removed = service.removeReaction(messageId, req.userId(), req.reactionType());
+    UUID userId = userExtractor.extractUserId(jwt);
+    if (userId == null) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+
+    boolean removed = service.removeReaction(messageId, userId, req.reactionType());
     if (!removed) {
       return ResponseEntity.notFound().build();
     }
@@ -56,9 +68,9 @@ public class ReactionController {
   }
 
   @GetMapping
-  public ResponseEntity<List<Reaction>> getReactions(@PathVariable UUID messageId) {
+  public ResponseEntity<List<ReactionResponse>> getReactions(@PathVariable UUID messageId) {
     List<Reaction> reactions = service.getReactionsByMessageId(messageId);
-    return ResponseEntity.ok(reactions);
+    return ResponseEntity.ok(reactions.stream().map(this::toResponse).toList());
   }
 
   @GetMapping("/counts")
@@ -68,10 +80,19 @@ public class ReactionController {
   }
 
   @GetMapping("/user/{userId}")
-  public ResponseEntity<List<Reaction>> getUserReactions(
+  public ResponseEntity<List<ReactionResponse>> getUserReactions(
       @PathVariable UUID messageId,
-      @PathVariable String userId) {
+      @PathVariable UUID userId) {
     List<Reaction> reactions = service.getUserReactionsOnMessage(messageId, userId);
-    return ResponseEntity.ok(reactions);
+    return ResponseEntity.ok(reactions.stream().map(this::toResponse).toList());
+  }
+
+  private ReactionResponse toResponse(Reaction reaction) {
+    return new ReactionResponse(
+        reaction.getId(),
+        reaction.getReactionType(),
+        reaction.getUserId(),
+        reaction.getCreatedAt(),
+        reaction.getMessageId());
   }
 }

@@ -37,7 +37,6 @@ public class MessageService {
     } else {
       messages = repository.findTopLevelByReadingIdOrderByCreatedAtDesc(readingId.trim());
     }
-    messages.forEach(this::loadRepliesRecursively);
     return messages;
   }
 
@@ -82,20 +81,6 @@ public class MessageService {
 
   @Transactional(readOnly = true)
   public Message findByIdWithReplies(UUID id) {
-    return repository.findById(id)
-        .map(message -> {
-          loadRepliesRecursively(message);
-          return message;
-        })
-        .orElse(null);
-  }
-
-  private void loadRepliesRecursively(Message message) {
-    if (message.getReplies() != null) {
-      message.getReplies().size();
-      for (Message reply : message.getReplies()) {
-        loadRepliesRecursively(reply);
-      }
-    }
+    return repository.findByIdWithReplies(id).orElse(null);
   }
 }

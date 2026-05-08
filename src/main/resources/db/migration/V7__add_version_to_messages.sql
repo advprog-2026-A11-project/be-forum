@@ -1,0 +1,2 @@
+ALTER TABLE messages
+    ADD COLUMN version INTEGER DEFAULT 0;
