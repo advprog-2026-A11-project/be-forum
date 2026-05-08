@@ -40,7 +40,13 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 @WebMvcTest(ReactionController.class)
-@Import({SecurityConfig.class, JwtUserExtractor.class, RoleAuthorizationService.class, MessageAuthorizationService.class, MessageAuthorizationValidator.class})
+@Import({
+    SecurityConfig.class,
+    JwtUserExtractor.class,
+    RoleAuthorizationService.class,
+    MessageAuthorizationService.class,
+    MessageAuthorizationValidator.class
+})
 class ReactionControllerTest {
 
   @Autowired
