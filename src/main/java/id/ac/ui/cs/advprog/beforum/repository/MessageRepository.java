@@ -30,4 +30,13 @@ public interface MessageRepository extends JpaRepository<Message, UUID> {
   @EntityGraph(attributePaths = {"replies"})
   @Query("SELECT m FROM Message m WHERE m.id = :id")
   Optional<Message> findByIdWithReplies(@Param("id") UUID id);
+
+  @Query(
+      """
+          SELECT m.parent.id, COUNT(m)
+          FROM Message m
+          WHERE m.parent.id IN :parentIds
+          GROUP BY m.parent.id
+      """)
+  List<Object[]> countRepliesByParentIds(@Param("parentIds") List<UUID> parentIds);
 }
