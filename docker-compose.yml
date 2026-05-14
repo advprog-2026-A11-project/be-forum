@@ -14,6 +14,17 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+  redis:
+    image: redis:7-alpine
+    expose:
+      - "6379"
+    volumes:
+      - beforum-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   app:
     image: ${DOCKER_HUB_USERNAME}/${DOCKER_HUB_REPO_NAME}:latest
@@ -23,12 +34,17 @@ services:
       - DB_PASSWORD=${POSTGRES_PASSWORD}
       - AUTH_BACKEND_URL=${AUTH_BACKEND_URL}
       - SUPABASE_URL=${SUPABASE_URL}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
     ports:
       - "8080:8080"
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
 
 volumes:
   beforum-db-data:
+  beforum-redis-data:

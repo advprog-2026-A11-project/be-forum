@@ -33,13 +33,10 @@ public class MessageService {
 
   @Transactional(readOnly = true)
   public List<Message> listMessages(String readingId) {
-    List<Message> messages;
     if (readingId == null || readingId.isBlank()) {
-      messages = repository.findTopLevelOrderByCreatedAtDesc();
-    } else {
-      messages = repository.findTopLevelByReadingIdOrderByCreatedAtDesc(readingId.trim());
+      return repository.findTopLevelOrderByCreatedAtDesc();
     }
-    return messages;
+    return repository.findTopLevelByReadingIdOrderByCreatedAtDesc(readingId.trim());
   }
 
   @Transactional(readOnly = true)
