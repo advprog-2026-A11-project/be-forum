@@ -18,14 +18,18 @@ import id.ac.ui.cs.advprog.beforum.controller.support.MessageAuthorizationServic
 import id.ac.ui.cs.advprog.beforum.controller.support.MessageAuthorizationValidator;
 import id.ac.ui.cs.advprog.beforum.controller.support.MessageRequestValidator;
 import id.ac.ui.cs.advprog.beforum.controller.support.MessageResponseMapper;
+import id.ac.ui.cs.advprog.beforum.dto.MessageResponse;
 import id.ac.ui.cs.advprog.beforum.model.Message;
 import id.ac.ui.cs.advprog.beforum.security.JwtUserExtractor;
 import id.ac.ui.cs.advprog.beforum.security.RoleAuthorizationService;
 import id.ac.ui.cs.advprog.beforum.security.SecurityConfig;
+import id.ac.ui.cs.advprog.beforum.service.CacheInvalidationService;
+import id.ac.ui.cs.advprog.beforum.service.MessageQueryCacheService;
 import id.ac.ui.cs.advprog.beforum.service.MessageService;
 import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -55,6 +59,12 @@ class MessageControllerTest {
 
   @MockBean
   private MessageService service;
+
+  @MockBean
+  private MessageQueryCacheService queryCacheService;
+
+  @MockBean
+  private CacheInvalidationService cacheInvalidationService;
 
   @MockBean
   private JwtDecoder jwtDecoder;
@@ -137,14 +147,11 @@ class MessageControllerTest {
 
   @Test
   void getRepliesShouldReturnListOfReplies() throws Exception {
-    Message reply2 = new Message();
-    reply2.setId(UUID.randomUUID());
-    reply2.setContent("Second reply");
-    reply2.setParent(parentMessage);
-
-    List<Message> replies = Arrays.asList(reply, reply2);
     when(service.findById(parentId)).thenReturn(parentMessage);
-    when(service.getReplies(parentId)).thenReturn(replies);
+    when(queryCacheService.getRepliesDto(parentId)).thenReturn(
+        List.of(
+            toResponse(reply.getId(), "Reply content", "reading-1", parentId),
+            toResponse(UUID.randomUUID(), "Second reply", "reading-1", parentId)));
 
     mockMvc.perform(get("/api/messages/{parentId}/replies", parentId))
         .andExpect(status().isOk())
@@ -155,7 +162,7 @@ class MessageControllerTest {
 
   @Test
   void getRepliesShouldReturn404WhenParentNotFound() throws Exception {
-    when(service.findById(parentId)).thenReturn(null);
+    when(queryCacheService.getRepliesDto(parentId)).thenReturn(null);
 
     mockMvc.perform(get("/api/messages/{parentId}/replies", parentId))
         .andExpect(status().isNotFound());
@@ -280,8 +287,18 @@ class MessageControllerTest {
 
   @Test
   void getByIdShouldReturnMessageWithReplies() throws Exception {
-    parentMessage.getReplies().add(reply);
-    when(service.findByIdWithReplies(parentId)).thenReturn(parentMessage);
+    MessageResponse response = new MessageResponse(
+        parentId,
+        "Parent message content",
+        OffsetDateTime.now(),
+        "reading-1",
+        userId,
+        null,
+        1L,
+        List.of(toResponse(replyId, "Reply content", "reading-1", parentId)),
+        List.of(),
+        Map.of());
+    when(queryCacheService.getMessageDetailDto(parentId)).thenReturn(response);
 
     mockMvc.perform(get("/api/messages/{id}", parentId))
         .andExpect(status().isOk())
@@ -293,7 +310,7 @@ class MessageControllerTest {
 
   @Test
   void getByIdShouldReturn404WhenMessageNotFound() throws Exception {
-    when(service.findByIdWithReplies(parentId)).thenReturn(null);
+    when(queryCacheService.getMessageDetailDto(parentId)).thenReturn(null);
 
     mockMvc.perform(get("/api/messages/{id}", parentId))
         .andExpect(status().isNotFound());
@@ -407,26 +424,42 @@ class MessageControllerTest {
 
   @Test
   void listShouldReturnAllMessages() throws Exception {
-    List<Message> messages = Arrays.asList(parentMessage, reply);
-    when(service.listMessages(null)).thenReturn(messages);
+    when(queryCacheService.listMessagesDto(null)).thenReturn(List.of(
+        toResponse(parentId, "Parent message content", "reading-1", null),
+        toResponse(replyId, "Reply content", "reading-1", parentId)));
 
     mockMvc.perform(get("/api/messages"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.length()").value(2));
 
-    verify(service).listMessages(null);
+    verify(queryCacheService).listMessagesDto(null);
   }
 
   @Test
   void listShouldFilterByReadingId() throws Exception {
-    when(service.listMessages("reading-1")).thenReturn(List.of(parentMessage));
+    when(queryCacheService.listMessagesDto("reading-1"))
+        .thenReturn(List.of(toResponse(parentId, "Parent message content", "reading-1", null)));
 
     mockMvc.perform(get("/api/messages").param("readingId", "reading-1"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.length()").value(1))
         .andExpect(jsonPath("$[0].readingId").value("reading-1"));
 
-    verify(service).listMessages("reading-1");
+    verify(queryCacheService).listMessagesDto("reading-1");
+  }
+
+  private MessageResponse toResponse(UUID id, String content, String readingId, UUID parentId) {
+    return new MessageResponse(
+        id,
+        content,
+        OffsetDateTime.now(),
+        readingId,
+        userId,
+        parentId,
+        0L,
+        List.of(),
+        List.of(),
+        Map.of());
   }
 
   @Test
@@ -660,4 +693,48 @@ class MessageControllerTest {
     mockMvc.perform(delete("/api/messages/{parentId}/replies/{replyId}", parentId, replyId))
         .andExpect(status().isUnauthorized());
   }
+
+
+  @Test
+  void updateShouldReturn401WhenYomuUserIdMissing() throws Exception {
+    mockMvc.perform(put("/api/messages/{id}", parentId)
+            .with(jwt().jwt(token -> token.claims(claims -> claims.remove("yomu_user_id"))))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"content\": \"Updated content\"}"))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void deleteShouldReturn401WhenYomuUserIdMissing() throws Exception {
+    mockMvc.perform(delete("/api/messages/{id}", parentId)
+            .with(jwt().jwt(token -> token.claims(claims -> claims.remove("yomu_user_id"))))
+            .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void createReplyShouldReturn401WhenYomuUserIdMissing() throws Exception {
+    mockMvc.perform(post("/api/messages/{parentId}/replies", parentId)
+            .with(jwt().jwt(token -> token.claims(claims -> claims.remove("yomu_user_id"))))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"content\": \"Reply content\"}"))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void updateReplyShouldReturn401WhenYomuUserIdMissing() throws Exception {
+    mockMvc.perform(put("/api/messages/{parentId}/replies/{replyId}", parentId, replyId)
+            .with(jwt().jwt(token -> token.claims(claims -> claims.remove("yomu_user_id"))))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"content\": \"Updated content\"}"))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void deleteReplyShouldReturn401WhenYomuUserIdMissing() throws Exception {
+    mockMvc.perform(delete("/api/messages/{parentId}/replies/{replyId}", parentId, replyId)
+            .with(jwt().jwt(token -> token.claims(claims -> claims.remove("yomu_user_id")))))
+        .andExpect(status().isUnauthorized());
+  }
+
 }

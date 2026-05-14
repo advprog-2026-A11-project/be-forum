@@ -331,4 +331,36 @@ class MessageServiceTest {
     assertNotNull(result);
     assertNull(result.getReplies());
   }
+
+
+  @Test
+  void getReplyCountsByParentIdsShouldReturnEmptyMapWhenInputIsNull() {
+    var counts = service.getReplyCountsByParentIds(null);
+    assertTrue(counts.isEmpty());
+    verify(repository, never()).countRepliesByParentIds(any());
+  }
+
+  @Test
+  void getReplyCountsByParentIdsShouldReturnEmptyMapWhenInputIsEmpty() {
+    var counts = service.getReplyCountsByParentIds(List.of());
+    assertTrue(counts.isEmpty());
+    verify(repository, never()).countRepliesByParentIds(any());
+  }
+
+  @Test
+  void getReplyCountsByParentIdsShouldMapRows() {
+    UUID p1 = UUID.randomUUID();
+    UUID p2 = UUID.randomUUID();
+    when(repository.countRepliesByParentIds(List.of(p1, p2))).thenReturn(List.of(
+        new Object[] {p1, 3L},
+        new Object[] {p2, 1L}
+    ));
+
+    var counts = service.getReplyCountsByParentIds(List.of(p1, p2));
+
+    assertEquals(2, counts.size());
+    assertEquals(3L, counts.get(p1));
+    assertEquals(1L, counts.get(p2));
+  }
+
 }

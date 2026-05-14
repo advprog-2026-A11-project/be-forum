@@ -33,7 +33,7 @@ public class MessageQueryCacheService {
   }
 
   @Transactional(readOnly = true)
-  @Cacheable(value = "messages:detail:dto", key = "#id")
+  @Cacheable(value = "messages:detail:dto", key = "#id", unless = "#result == null")
   public MessageResponse getMessageDetailDto(UUID id) {
     Message message = messageService.findByIdWithReplies(id);
     if (message == null) {
@@ -43,7 +43,7 @@ public class MessageQueryCacheService {
   }
 
   @Transactional(readOnly = true)
-  @Cacheable(value = "messages:replies:dto", key = "#parentId")
+  @Cacheable(value = "messages:replies:dto", key = "#parentId", unless = "#result == null")
   public List<MessageResponse> getRepliesDto(UUID parentId) {
     Message parent = messageService.findById(parentId);
     if (parent == null) {

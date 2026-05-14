@@ -14,6 +14,8 @@ import id.ac.ui.cs.advprog.beforum.controller.support.MessageResponseMapper;
 import id.ac.ui.cs.advprog.beforum.dto.CreateMessageRequest;
 import id.ac.ui.cs.advprog.beforum.dto.MessageResponse;
 import id.ac.ui.cs.advprog.beforum.security.JwtUserExtractor;
+import id.ac.ui.cs.advprog.beforum.service.CacheInvalidationService;
+import id.ac.ui.cs.advprog.beforum.service.MessageQueryCacheService;
 import id.ac.ui.cs.advprog.beforum.service.MessageService;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -57,11 +59,13 @@ class MessageControllerUnitTest {
   private MessageController controller() {
     return new MessageController(
         service,
+        mock(MessageQueryCacheService.class),
         new JwtUserExtractor(),
         new MessageRequestValidator(),
         new MessageAuthorizationValidator(
             new MessageAuthorizationService(),
             mock()),
-        new MessageResponseMapper());
+        new MessageResponseMapper(),
+        mock(CacheInvalidationService.class));
   }
 }

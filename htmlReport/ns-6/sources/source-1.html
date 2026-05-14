@@ -1,0 +1,164 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > ApiExceptionHandler</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">id.ac.ui.cs.advprog.beforum.exception</a>
+</div>
+
+<h1>Coverage Summary for Class: ApiExceptionHandler (id.ac.ui.cs.advprog.beforum.exception)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">ApiExceptionHandler</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (8/8)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (15/15)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package id.ac.ui.cs.advprog.beforum.exception;
+&nbsp;
+&nbsp;import id.ac.ui.cs.advprog.beforum.dto.ErrorResponse;
+&nbsp;import org.springframework.http.HttpStatus;
+&nbsp;import org.springframework.http.ResponseEntity;
+&nbsp;import org.springframework.orm.ObjectOptimisticLockingFailureException;
+&nbsp;import org.springframework.web.bind.annotation.ExceptionHandler;
+&nbsp;import org.springframework.web.bind.annotation.RestControllerAdvice;
+&nbsp;import org.springframework.web.servlet.resource.NoResourceFoundException;
+&nbsp;
+&nbsp;@RestControllerAdvice
+<b class="fc">&nbsp;public class ApiExceptionHandler {</b>
+&nbsp;
+&nbsp;  @ExceptionHandler(UnauthorizedException.class)
+&nbsp;  public ResponseEntity&lt;ErrorResponse&gt; handleUnauthorized(UnauthorizedException ex) {
+<b class="fc">&nbsp;    return ResponseEntity.status(HttpStatus.FORBIDDEN)</b>
+<b class="fc">&nbsp;        .body(new ErrorResponse(&quot;FORBIDDEN&quot;, ex.getMessage()));</b>
+&nbsp;  }
+&nbsp;
+&nbsp;  @ExceptionHandler(EntityNotFoundException.class)
+&nbsp;  public ResponseEntity&lt;ErrorResponse&gt; handleEntityNotFound(EntityNotFoundException ex) {
+<b class="fc">&nbsp;    return ResponseEntity.status(HttpStatus.NOT_FOUND)</b>
+<b class="fc">&nbsp;        .body(new ErrorResponse(&quot;NOT_FOUND&quot;, ex.getMessage()));</b>
+&nbsp;  }
+&nbsp;
+&nbsp;  @ExceptionHandler(IllegalArgumentException.class)
+&nbsp;  public ResponseEntity&lt;ErrorResponse&gt; handleIllegalArgumentException(
+&nbsp;      IllegalArgumentException ex) {
+<b class="fc">&nbsp;    return ResponseEntity.status(HttpStatus.BAD_REQUEST)</b>
+<b class="fc">&nbsp;        .body(new ErrorResponse(&quot;BAD_REQUEST&quot;, ex.getMessage()));</b>
+&nbsp;  }
+&nbsp;
+&nbsp;  @ExceptionHandler(IllegalStateException.class)
+&nbsp;  public ResponseEntity&lt;ErrorResponse&gt; handleIllegalStateException(IllegalStateException ex) {
+<b class="fc">&nbsp;    return ResponseEntity.status(HttpStatus.CONFLICT)</b>
+<b class="fc">&nbsp;        .body(new ErrorResponse(&quot;CONFLICT&quot;, ex.getMessage()));</b>
+&nbsp;  }
+&nbsp;
+&nbsp;  @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+&nbsp;  public ResponseEntity&lt;ErrorResponse&gt; handleOptimisticLockingFailure(
+&nbsp;      ObjectOptimisticLockingFailureException ex) {
+<b class="fc">&nbsp;    return ResponseEntity.status(HttpStatus.CONFLICT)</b>
+<b class="fc">&nbsp;        .body(new ErrorResponse(</b>
+&nbsp;            &quot;STALE_DATA&quot;,
+&nbsp;            &quot;The resource was modified by another user. Please refresh and try again.&quot;
+&nbsp;        ));
+&nbsp;  }
+&nbsp;
+&nbsp;  @ExceptionHandler(NoResourceFoundException.class)
+&nbsp;  public ResponseEntity&lt;ErrorResponse&gt; handleNoResourceFound(NoResourceFoundException ex) {
+<b class="fc">&nbsp;    return ResponseEntity.status(HttpStatus.NOT_FOUND)</b>
+<b class="fc">&nbsp;        .body(new ErrorResponse(&quot;NOT_FOUND&quot;, &quot;Resource not found&quot;));</b>
+&nbsp;  }
+&nbsp;
+&nbsp;  @ExceptionHandler(Exception.class)
+&nbsp;  public ResponseEntity&lt;ErrorResponse&gt; handleGenericException(Exception ex) {
+<b class="fc">&nbsp;    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</b>
+<b class="fc">&nbsp;        .body(new ErrorResponse(&quot;INTERNAL_ERROR&quot;, &quot;An unexpected error occurred&quot;));</b>
+&nbsp;  }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2026-05-14 20:18</div>
+</div>
+</body>
+</html>

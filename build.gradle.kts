@@ -60,6 +60,7 @@ dependencies {
     testImplementation("org.testcontainers:junit-jupiter")
     testImplementation("org.testcontainers:postgresql")
     testImplementation("com.h2database:h2")
+    testImplementation("com.github.codemonstur:embedded-redis:1.4.2")
 }
 
 tasks.withType<Test> {
