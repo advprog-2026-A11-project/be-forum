@@ -85,7 +85,6 @@ class CacheInvalidationServiceTest {
     verify(detailCache).evict(parentId);
   }
 
-
   @Test
   void evictListByReadingIdShouldUseAllForBlankReadingId() {
     CacheManager cacheManager = mock(CacheManager.class);
@@ -119,8 +118,6 @@ class CacheInvalidationServiceTest {
 
     verify(cacheManager).getCache("messages:replies:dto");
   }
-
-
 
   @Test
   void evictListByReadingIdShouldUseAllForNullReadingId() {

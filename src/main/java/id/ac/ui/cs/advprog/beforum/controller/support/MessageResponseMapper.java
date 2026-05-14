@@ -17,7 +17,8 @@ public class MessageResponseMapper {
     return messages.stream().map(this::toResponse).toList();
   }
 
-  public List<MessageResponse> toResponsesShallow(List<Message> messages, Map<java.util.UUID, Long> replyCounts) {
+  public List<MessageResponse> toResponsesShallow(
+      List<Message> messages, Map<java.util.UUID, Long> replyCounts) {
     return messages.stream().map(message -> toResponseShallow(message, replyCounts)).toList();
   }
 
@@ -43,7 +44,8 @@ public class MessageResponseMapper {
         reactionCounts);
   }
 
-  public MessageResponse toResponseShallow(Message message, Map<java.util.UUID, Long> replyCounts) {
+  public MessageResponse toResponseShallow(
+      Message message, Map<java.util.UUID, Long> replyCounts) {
     List<ReactionResponse> reactionResponses = mapReactions(message.getReactions());
     Map<ReactionType, Long> reactionCounts = buildReactionCounts(reactionResponses);
 

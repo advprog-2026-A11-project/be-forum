@@ -694,7 +694,6 @@ class MessageControllerTest {
         .andExpect(status().isUnauthorized());
   }
 
-
   @Test
   void updateShouldReturn401WhenYomuUserIdMissing() throws Exception {
     mockMvc.perform(put("/api/messages/{id}", parentId)

@@ -332,7 +332,6 @@ class MessageServiceTest {
     assertNull(result.getReplies());
   }
 
-
   @Test
   void getReplyCountsByParentIdsShouldReturnEmptyMapWhenInputIsNull() {
     var counts = service.getReplyCountsByParentIds(null);

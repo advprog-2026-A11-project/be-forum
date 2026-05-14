@@ -24,7 +24,9 @@ public class MessageQueryCacheService {
   }
 
   @Transactional(readOnly = true)
-  @Cacheable(value = "messages:list:dto", key = "#readingId == null || #readingId.isBlank() ? 'ALL' : #readingId.trim()")
+  @Cacheable(
+      value = "messages:list:dto",
+      key = "#readingId == null || #readingId.isBlank() ? 'ALL' : #readingId.trim()")
   public List<MessageResponse> listMessagesDto(String readingId) {
     List<Message> messages = messageService.listMessages(readingId);
     List<UUID> messageIds = messages.stream().map(Message::getId).toList();

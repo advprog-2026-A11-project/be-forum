@@ -36,7 +36,8 @@ public class ReactionService {
   }
 
   @Transactional
-  public AddReactionResult addReactionWithOutcome(UUID messageId, UUID userId, ReactionType reactionType) {
+  public AddReactionResult addReactionWithOutcome(
+      UUID messageId, UUID userId, ReactionType reactionType) {
     Optional<Message> messageOpt = messageRepository.findById(messageId);
     if (messageOpt.isEmpty()) {
       return new AddReactionResult(AddReactionOutcome.MESSAGE_NOT_FOUND, null);

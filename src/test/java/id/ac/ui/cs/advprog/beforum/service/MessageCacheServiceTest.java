@@ -6,11 +6,11 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import id.ac.ui.cs.advprog.beforum.controller.support.MessageResponseMapper;
 import id.ac.ui.cs.advprog.beforum.dto.MessageResponse;
 import id.ac.ui.cs.advprog.beforum.model.Message;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import java.io.IOException;
@@ -233,7 +233,6 @@ class MessageCacheServiceTest {
         List.of(),
         Map.of());
   }
-
 
   @Test
   void getMessageDetailDtoShouldReturnNullWhenMessageMissing() {
