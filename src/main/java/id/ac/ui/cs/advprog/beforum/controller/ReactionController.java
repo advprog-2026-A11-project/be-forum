@@ -34,7 +34,7 @@ public class ReactionController {
   }
 
   @PostMapping
-  public ResponseEntity<ReactionResponse> addReaction(
+  public ResponseEntity<?> addReaction(
       @AuthenticationPrincipal Jwt jwt,
       @PathVariable UUID messageId,
       @RequestBody ReactionRequest req) {
@@ -43,11 +43,13 @@ public class ReactionController {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
 
-    Reaction reaction = service.addReaction(messageId, userId, req.reactionType());
-    if (reaction == null) {
-      return ResponseEntity.notFound().build();
-    }
-    return ResponseEntity.ok(toResponse(reaction));
+    ReactionService.AddReactionResult result =
+        service.addReactionWithOutcome(messageId, userId, req.reactionType());
+    return switch (result.outcome()) {
+      case MESSAGE_NOT_FOUND -> ResponseEntity.notFound().build();
+      case TOGGLED_OFF -> ResponseEntity.noContent().build();
+      case ADDED -> ResponseEntity.ok(toResponse(result.reaction()));
+    };
   }
 
   @DeleteMapping

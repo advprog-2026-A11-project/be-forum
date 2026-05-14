@@ -9,6 +9,7 @@ import id.ac.ui.cs.advprog.beforum.model.Message;
 import id.ac.ui.cs.advprog.beforum.security.JwtUserExtractor;
 import id.ac.ui.cs.advprog.beforum.service.MessageService;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -67,7 +68,10 @@ public class MessageController {
   @GetMapping
   public ResponseEntity<List<MessageResponse>> list(
       @RequestParam(required = false) String readingId) {
-    return ResponseEntity.ok(responseMapper.toResponses(service.listMessages(readingId)));
+    List<Message> messages = service.listMessages(readingId);
+    List<UUID> messageIds = messages.stream().map(Message::getId).toList();
+    Map<UUID, Long> replyCounts = service.getReplyCountsByParentIds(messageIds);
+    return ResponseEntity.ok(responseMapper.toResponsesShallow(messages, replyCounts));
   }
 
   @GetMapping("/{id}")

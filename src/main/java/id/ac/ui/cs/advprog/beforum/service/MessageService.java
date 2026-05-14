@@ -2,7 +2,9 @@ package id.ac.ui.cs.advprog.beforum.service;
 
 import id.ac.ui.cs.advprog.beforum.model.Message;
 import id.ac.ui.cs.advprog.beforum.repository.MessageRepository;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -82,5 +84,21 @@ public class MessageService {
   @Transactional(readOnly = true)
   public Message findByIdWithReplies(UUID id) {
     return repository.findByIdWithReplies(id).orElse(null);
+  }
+
+  @Transactional(readOnly = true)
+  public Map<UUID, Long> getReplyCountsByParentIds(List<UUID> parentIds) {
+    Map<UUID, Long> counts = new HashMap<>();
+    if (parentIds == null || parentIds.isEmpty()) {
+      return counts;
+    }
+
+    List<Object[]> rows = repository.countRepliesByParentIds(parentIds);
+    for (Object[] row : rows) {
+      UUID parentId = (UUID) row[0];
+      Long count = (Long) row[1];
+      counts.put(parentId, count);
+    }
+    return counts;
   }
 }
