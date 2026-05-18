@@ -65,8 +65,8 @@ jobs:
 
       - name: Check if image exists
         run: |
-          VERSION="${{ needs.validate-inputs.outputs.version }}"
-          IMAGE="${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPO_NAME }}:$VERSION"
+          VERSION="$VERSION"
+          IMAGE="$DOCKER_HUB_USERNAME/$DOCKER_HUB_REPO_NAME:$VERSION"
           
           echo "🔍 Checking if image exists: $IMAGE"
           
@@ -75,9 +75,13 @@ jobs:
           else
             echo "❌ Image not found: $IMAGE"
             echo "Available tags:"
-            curl -s "https://hub.docker.com/v2/repositories/${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPO_NAME }}/tags/?page_size=10" | grep -o '"name":"[^"]*"' | cut -d'"' -f4 | head -10
+            curl -s "https://hub.docker.com/v2/repositories/$DOCKER_HUB_USERNAME/$DOCKER_HUB_REPO_NAME/tags/?page_size=10" | grep -o '"name":"[^"]*"' | cut -d'"' -f4 | head -10
             exit 1
           fi
+        env:
+          VERSION: ${{ needs.validate-inputs.outputs.version }}
+          DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
+          DOCKER_HUB_REPO_NAME: ${{ secrets.DOCKER_HUB_REPO_NAME }}
 
   rollback:
     name: Execute Rollback
