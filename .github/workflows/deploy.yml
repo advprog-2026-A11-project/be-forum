@@ -114,6 +114,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Generate immutable image tag
+        id: image-tag
+        run: |
+          SHORT_SHA="${GITHUB_SHA::7}"
+          DATE_TAG="$(date -u +%Y%m%d)"
+          VERSION_TAG="v${DATE_TAG}-${SHORT_SHA}"
+          echo "version_tag=$VERSION_TAG" >> "$GITHUB_OUTPUT"
+          echo "Using image tag: $VERSION_TAG"
       - name: Log in to Docker Hub
         uses: docker/login-action@62216b50636a8c8c25d246437857ed84232019ca
         with:
@@ -123,7 +131,9 @@ jobs:
         uses: docker/build-push-action@c382f710d39a5bb4e430307530a720f50c2d3318
         with:
           push: true
-          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPO_NAME }}:latest
+          tags: |
+            ${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPO_NAME }}:latest
+            ${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPO_NAME }}:${{ steps.image-tag.outputs.version_tag }}
       - name: Copy docker-compose.yml and Dockerfile to server
         uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345
         with:
@@ -142,7 +152,7 @@ jobs:
             cd /home/${{ secrets.SSH_USERNAME }}/app
             docker compose down || true
             echo "${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
-            docker pull ${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPO_NAME }}:latest
+            docker pull ${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPO_NAME }}:${{ steps.image-tag.outputs.version_tag }}
             cat > .env << EOL
             POSTGRES_DB=${{ secrets.POSTGRES_DB }}
             POSTGRES_USER=${{ secrets.POSTGRES_USER }}
@@ -152,7 +162,8 @@ jobs:
             OTEL_LOGS_ENDPOINT=${{ secrets.OTEL_LOGS_ENDPOINT }}
             DOCKER_HUB_USERNAME=${{ secrets.DOCKER_HUB_USERNAME }}
             DOCKER_HUB_REPO_NAME=${{ secrets.DOCKER_HUB_REPO_NAME }}
-            AUTH_BACKEND_URL=${{secrets.AUTH_BACKEND_URL}}
+            IMAGE_TAG=${{ steps.image-tag.outputs.version_tag }}
+            CURRENT_VERSION=${{ steps.image-tag.outputs.version_tag }}
             EOL
             docker compose up -d
             docker ps

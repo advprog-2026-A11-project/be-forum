@@ -1,0 +1,217 @@
+name: Rollback Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Docker image version to rollback to (e.g., v20240125-abc1234)'
+        required: true
+        type: string
+      environment:
+        description: 'Environment to rollback'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+      confirm_rollback:
+        description: 'Type "CONFIRM" to proceed with rollback'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  validate-inputs:
+    name: Validate Rollback Inputs
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.validate.outputs.version }}
+      proceed: ${{ steps.validate.outputs.proceed }}
+    
+    steps:
+      - name: Validate inputs
+        id: validate
+        run: |
+          if [ "${{ github.event.inputs.confirm_rollback }}" != "CONFIRM" ]; then
+            echo "❌ Rollback confirmation failed. Please type 'CONFIRM' to proceed."
+            exit 1
+          fi
+          
+          VERSION="${{ github.event.inputs.version }}"
+          if [[ ! "$VERSION" =~ ^(v|dev-)[0-9]{8}-[a-f0-9]{7}$ ]]; then
+            echo "❌ Invalid version format. Expected format: v20240125-abc1234 or dev-20240125-abc1234"
+            exit 1
+          fi
+          
+          echo "✅ Validation passed for version: $VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "proceed=true" >> $GITHUB_OUTPUT
+
+  check-image-exists:
+    name: Verify Docker Image Exists
+    needs: validate-inputs
+    runs-on: ubuntu-latest
+    if: needs.validate-inputs.outputs.proceed == 'true'
+    
+    steps:
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Check if image exists
+        run: |
+          VERSION="${{ needs.validate-inputs.outputs.version }}"
+          IMAGE="${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPO_NAME }}:$VERSION"
+          
+          echo "🔍 Checking if image exists: $IMAGE"
+          
+          if docker manifest inspect $IMAGE > /dev/null 2>&1; then
+            echo "✅ Image found: $IMAGE"
+          else
+            echo "❌ Image not found: $IMAGE"
+            echo "Available tags:"
+            curl -s "https://hub.docker.com/v2/repositories/${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPO_NAME }}/tags/?page_size=10" | grep -o '"name":"[^"]*"' | cut -d'"' -f4 | head -10
+            exit 1
+          fi
+
+  rollback:
+    name: Execute Rollback
+    needs: [validate-inputs, check-image-exists]
+    runs-on: ubuntu-latest
+    if: needs.validate-inputs.outputs.proceed == 'true'
+    
+    steps:
+      - name: Create backup of current deployment
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd /home/${{ secrets.SSH_USERNAME }}/app
+            echo "📋 Creating backup of current deployment..."
+            
+            if [ -f .env ]; then
+              CURRENT_VERSION=$(grep "CURRENT_VERSION=" .env | cut -d'=' -f2)
+              echo "Current version: $CURRENT_VERSION"
+              
+              echo "BACKUP_VERSION=$CURRENT_VERSION" > .env.backup
+              echo "BACKUP_DATE=$(date)" >> .env.backup
+            else
+              echo "No current version found"
+            fi
+
+      - name: Execute rollback deployment
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+            cd /home/${{ secrets.SSH_USERNAME }}/app
+            VERSION="${{ needs.validate-inputs.outputs.version }}"
+            IMAGE="${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPO_NAME }}:$VERSION"
+            
+            echo "🔄 Starting rollback to version: $VERSION"
+            
+            echo "${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
+            
+            echo "📥 Pulling image: $IMAGE"
+            docker pull $IMAGE
+            
+            echo "🛑 Stopping current containers..."
+            docker compose down || true
+
+            cat > .env << EOL
+            POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+            POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+            OTEL_EXPORTER_OTLP_ENDPOINT=${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
+            OTEL_LOGS_ENDPOINT=${{ secrets.OTEL_LOGS_ENDPOINT }}
+            DOCKER_HUB_USERNAME=${{ secrets.DOCKER_HUB_USERNAME }}
+            DOCKER_HUB_REPO_NAME=${{ secrets.DOCKER_HUB_REPO_NAME }}
+            IMAGE_TAG=$VERSION
+            CURRENT_VERSION=$VERSION
+            EOL
+            docker compose up -d
+            docker ps
+
+  health-check:
+    name: Post-Rollback Health Check
+    needs: [validate-inputs, rollback]
+    runs-on: ubuntu-latest
+    if: needs.validate-inputs.outputs.proceed == 'true'
+    
+    steps:
+      - name: Verify service health
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+            cd /home/${{ secrets.SSH_USERNAME }}/app
+            echo "🏥 Performing health check..."
+            
+            sleep 20
+            
+            if docker compose ps --status running app | grep -q app; then
+              echo "✅ App service container is running"
+            else
+              echo "❌ App service container is not running"
+              docker compose ps
+              docker compose logs --tail=200 app
+              exit 1
+            fi
+            
+            echo "🔍 Testing service endpoint..."
+            if curl -f -s http://localhost:8080/actuator/health; then
+              echo "✅ Service is responding to HTTP requests"
+            else
+              echo "❌ Health endpoint check failed"
+              docker compose logs --tail=200 app
+              exit 1
+            fi
+            
+            echo "📊 Final status:"
+            docker compose ps
+            
+            VERSION="${{ needs.validate-inputs.outputs.version }}"
+            echo "🎉 Rollback to version $VERSION completed successfully!"
+
+  notify-rollback:
+    name: Notify Rollback Status
+    needs: [validate-inputs, rollback, health-check]
+    runs-on: ubuntu-latest
+    if: always() && needs.validate-inputs.outputs.proceed == 'true'
+    
+    steps:
+      - name: Create rollback summary
+        run: |
+          VERSION="${{ needs.validate-inputs.outputs.version }}"
+          ENV="${{ github.event.inputs.environment }}"
+          
+          if [ "${{ needs.health-check.result }}" == "success" ]; then
+            STATUS="✅ SUCCESS"
+            MESSAGE="Rollback to version $VERSION completed successfully"
+          else
+            STATUS="❌ FAILED"
+            MESSAGE="Rollback to version $VERSION failed"
+          fi
+          
+          echo "## Rollback Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** $STATUS" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version:** $VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment:** $ENV" >> $GITHUB_STEP_SUMMARY
+          echo "- **Initiated by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Date:** $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "$MESSAGE" >> $GITHUB_STEP_SUMMARY
