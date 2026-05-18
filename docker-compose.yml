@@ -16,7 +16,7 @@ services:
       retries: 5
 
   app:
-    image: ${DOCKER_HUB_USERNAME}/${DOCKER_HUB_REPO_NAME}:latest
+    image: ${DOCKER_HUB_USERNAME}/${DOCKER_HUB_REPO_NAME}:${IMAGE_TAG:-latest}
     environment:
       - DB_URL=jdbc:postgresql://db:5432/${POSTGRES_DB}
       - DB_USERNAME=${POSTGRES_USER}
