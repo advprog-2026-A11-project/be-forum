@@ -112,15 +112,15 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_KEY }}
+          envs: VERSION,DOCKER_HUB_USERNAME,DOCKER_HUB_REPO_NAME,DOCKER_HUB_ACCESS_TOKEN,POSTGRES_DB,POSTGRES_USER,POSTGRES_PASSWORD,SUPABASE_URL,OTEL_EXPORTER_OTLP_ENDPOINT,OTEL_LOGS_ENDPOINT
           script: |
             set -e
             cd /home/${{ secrets.SSH_USERNAME }}/app
-            VERSION="${{ needs.validate-inputs.outputs.version }}"
-            IMAGE="${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPO_NAME }}:$VERSION"
+            IMAGE="$DOCKER_HUB_USERNAME/$DOCKER_HUB_REPO_NAME:$VERSION"
             
             echo "🔄 Starting rollback to version: $VERSION"
             
-            echo "${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
+            echo "$DOCKER_HUB_ACCESS_TOKEN" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
             
             echo "📥 Pulling image: $IMAGE"
             docker pull $IMAGE
@@ -129,19 +129,30 @@ jobs:
             docker compose down || true
 
             cat > .env << EOL
-            POSTGRES_DB=${{ secrets.POSTGRES_DB }}
-            POSTGRES_USER=${{ secrets.POSTGRES_USER }}
-            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
-            SUPABASE_URL=${{ secrets.SUPABASE_URL }}
-            OTEL_EXPORTER_OTLP_ENDPOINT=${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
-            OTEL_LOGS_ENDPOINT=${{ secrets.OTEL_LOGS_ENDPOINT }}
-            DOCKER_HUB_USERNAME=${{ secrets.DOCKER_HUB_USERNAME }}
-            DOCKER_HUB_REPO_NAME=${{ secrets.DOCKER_HUB_REPO_NAME }}
+            POSTGRES_DB=$POSTGRES_DB
+            POSTGRES_USER=$POSTGRES_USER
+            POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+            SUPABASE_URL=$SUPABASE_URL
+            OTEL_EXPORTER_OTLP_ENDPOINT=$OTEL_EXPORTER_OTLP_ENDPOINT
+            OTEL_LOGS_ENDPOINT=$OTEL_LOGS_ENDPOINT
+            DOCKER_HUB_USERNAME=$DOCKER_HUB_USERNAME
+            DOCKER_HUB_REPO_NAME=$DOCKER_HUB_REPO_NAME
             IMAGE_TAG=$VERSION
             CURRENT_VERSION=$VERSION
             EOL
             docker compose up -d
             docker ps
+        env:
+          VERSION: ${{ needs.validate-inputs.outputs.version }}
+          DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
+          DOCKER_HUB_REPO_NAME: ${{ secrets.DOCKER_HUB_REPO_NAME }}
+          DOCKER_HUB_ACCESS_TOKEN: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
+          OTEL_LOGS_ENDPOINT: ${{ secrets.OTEL_LOGS_ENDPOINT }}
 
   health-check:
     name: Post-Rollback Health Check
