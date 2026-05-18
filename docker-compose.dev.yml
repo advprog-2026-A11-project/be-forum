@@ -26,8 +26,17 @@ services:
       - AUTH_BACKEND_URL=${AUTH_BACKEND_URL:-http://localhost:8081}
       - SUPABASE_URL=${SUPABASE_URL}
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - OTEL_SERVICE_NAME=be-forum
+      - OTEL_ENVIRONMENT=${OTEL_ENVIRONMENT:-dev}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://host.docker.internal:4318}
+      - OTEL_LOGS_ENDPOINT=${OTEL_LOGS_ENDPOINT:-http://host.docker.internal:4318/v1/logs}
+      - OTEL_TRACE_SAMPLING_PROBABILITY=${OTEL_TRACE_SAMPLING_PROBABILITY:-1.0}
+      - OTEL_JAVA_GLOBAL_AUTOCONFIGURE_ENABLED=true
+      - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=${OTEL_LOGS_ENDPOINT:-http://host.docker.internal:4318/v1/logs}
+      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
     ports:
-      - "8080:8080"
+      - "8081:8080"
     depends_on:
       db:
         condition: service_healthy
