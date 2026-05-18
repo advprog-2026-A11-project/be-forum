@@ -16,83 +16,46 @@ jobs:
     steps:
       - name: Check status of linter.yml
         id: check-lint
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const { data: lint } = await github.rest.actions.listWorkflowRuns({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'linter.yml',
-              branch: 'main',
-              event: 'push',
-              status: 'completed',
-              per_page: 5
-            });
-
-            console.log("=== DEBUG LINTER RUNS ===");
-            console.log("Total runs returned:", lint.workflow_runs.length);
-
-            lint.workflow_runs.forEach((run, i) => {
-              console.log(`Run[${i}]`);
-              console.log("  id:", run.id);
-              console.log("  status:", run.status);
-              console.log("  conclusion:", run.conclusion);
-              console.log("  event:", run.event);
-              console.log("  head_branch:", run.head_branch);
-              console.log("  created_at:", run.created_at);
-            });
-
-            if (lint.workflow_runs.length === 0) {
-              console.log("❌ No workflow runs found");
-              return false;
-            }
-
-            const latest = lint.workflow_runs[0];
-            console.log("✅ Using latest run conclusion:", latest.conclusion);
-
-            return latest.conclusion === 'success';
+        run: |
+          set -e
+          API_URL="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/linter.yml/runs?branch=main&event=push&status=completed&per_page=1"
+          CONCLUSION=$(curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "$API_URL" | jq -r '.workflow_runs[0].conclusion // "none"')
+          echo "Latest linter conclusion: $CONCLUSION"
+          if [ "$CONCLUSION" = "success" ]; then
+            echo "result=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=false" >> "$GITHUB_OUTPUT"
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
 
       - name: Check status of scorecard.yml
         id: check-scorecard
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const { data: scorecard } = await github.rest.actions.listWorkflowRuns({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'scorecard.yml',
-              branch: 'main',
-              event: 'push',
-              status: 'completed',
-              per_page: 1
-            });
-            if (scorecard.workflow_runs.length === 0) {
-              return false;
-            }
-            return scorecard.workflow_runs[0].conclusion === 'success';
+        run: |
+          set -e
+          API_URL="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/scorecard.yml/runs?branch=main&event=push&status=completed&per_page=1"
+          CONCLUSION=$(curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "$API_URL" | jq -r '.workflow_runs[0].conclusion // "none"')
+          echo "Latest scorecard conclusion: $CONCLUSION"
+          if [ "$CONCLUSION" = "success" ]; then
+            echo "result=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=false" >> "$GITHUB_OUTPUT"
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
 
       - name: Check status of sonarcloud.yml
         id: check-sonar
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const { data: sonar } = await github.rest.actions.listWorkflowRuns({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'sonarcloud.yml',
-              branch: 'main',
-              event: 'push',
-              status: 'completed',
-              per_page: 1
-            });
-            if (sonar.workflow_runs.length === 0) {
-              return false;
-            }
-            return sonar.workflow_runs[0].conclusion === 'success';
+        run: |
+          set -e
+          API_URL="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/sonarcloud.yml/runs?branch=main&event=push&status=completed&per_page=1"
+          CONCLUSION=$(curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "$API_URL" | jq -r '.workflow_runs[0].conclusion // "none"')
+          echo "Latest sonarcloud conclusion: $CONCLUSION"
+          if [ "$CONCLUSION" = "success" ]; then
+            echo "result=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=false" >> "$GITHUB_OUTPUT"
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
 
@@ -113,7 +76,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - name: Generate immutable image tag
         id: image-tag
         run: |
