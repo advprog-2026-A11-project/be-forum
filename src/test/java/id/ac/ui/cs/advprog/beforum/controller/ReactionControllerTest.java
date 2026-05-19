@@ -21,6 +21,8 @@ import id.ac.ui.cs.advprog.beforum.model.ReactionType;
 import id.ac.ui.cs.advprog.beforum.security.JwtUserExtractor;
 import id.ac.ui.cs.advprog.beforum.security.RoleAuthorizationService;
 import id.ac.ui.cs.advprog.beforum.security.SecurityConfig;
+import id.ac.ui.cs.advprog.beforum.service.CacheInvalidationService;
+import id.ac.ui.cs.advprog.beforum.service.MessageService;
 import id.ac.ui.cs.advprog.beforum.service.ReactionService;
 import java.time.OffsetDateTime;
 import java.util.Arrays;
@@ -54,6 +56,12 @@ class ReactionControllerTest {
 
   @MockBean
   private ReactionService service;
+
+  @MockBean
+  private MessageService messageService;
+
+  @MockBean
+  private CacheInvalidationService cacheInvalidationService;
 
   @MockBean
   private JwtDecoder jwtDecoder;
@@ -92,11 +100,13 @@ class ReactionControllerTest {
 
   @Test
   void addReactionShouldReturnCreatedReaction() throws Exception {
-    when(service.addReaction(
+    when(service.addReactionWithOutcome(
         eq(messageId),
         eq(userId),
         eq(ReactionType.UPVOTE)
-    )).thenReturn(reaction);
+    )).thenReturn(new ReactionService.AddReactionResult(
+        ReactionService.AddReactionOutcome.ADDED, reaction));
+    when(messageService.findById(messageId)).thenReturn(message);
 
     mockMvc.perform(post("/api/messages/{messageId}/reactions", messageId)
             .with(authenticatedJwt())
@@ -107,12 +117,14 @@ class ReactionControllerTest {
         .andExpect(jsonPath("$.reactionType").value("UPVOTE"))
         .andExpect(jsonPath("$.userId").value(userId.toString()));
 
-    verify(service).addReaction(messageId, userId, ReactionType.UPVOTE);
+    verify(service).addReactionWithOutcome(messageId, userId, ReactionType.UPVOTE);
   }
 
   @Test
   void addReactionShouldReturn404WhenMessageNotFound() throws Exception {
-    when(service.addReaction(eq(messageId), any(), any())).thenReturn(null);
+    when(service.addReactionWithOutcome(eq(messageId), any(), any()))
+        .thenReturn(new ReactionService.AddReactionResult(
+            ReactionService.AddReactionOutcome.MESSAGE_NOT_FOUND, null));
 
     mockMvc.perform(post("/api/messages/{messageId}/reactions", messageId)
             .with(authenticatedJwt())
@@ -123,14 +135,16 @@ class ReactionControllerTest {
 
   @Test
   void addReactionShouldReturn409WhenDuplicate() throws Exception {
-    when(service.addReaction(eq(messageId), eq(userId), eq(ReactionType.UPVOTE)))
-        .thenThrow(new IllegalStateException("User has already given this reaction"));
+    when(service.addReactionWithOutcome(eq(messageId), eq(userId), eq(ReactionType.UPVOTE)))
+        .thenReturn(new ReactionService.AddReactionResult(
+            ReactionService.AddReactionOutcome.TOGGLED_OFF, null));
+    when(messageService.findById(messageId)).thenReturn(message);
 
     mockMvc.perform(post("/api/messages/{messageId}/reactions", messageId)
             .with(authenticatedJwt())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"reactionType\": \"UPVOTE\"}"))
-        .andExpect(status().isConflict());
+        .andExpect(status().isNoContent());
   }
 
   @Test
@@ -140,7 +154,7 @@ class ReactionControllerTest {
             .content("{\"reactionType\": \"UPVOTE\"}"))
         .andExpect(status().isUnauthorized());
 
-    verify(service, never()).addReaction(any(), any(), any());
+    verify(service, never()).addReactionWithOutcome(any(), any(), any());
   }
 
   @Test
@@ -151,7 +165,7 @@ class ReactionControllerTest {
             .content("{\"reactionType\": \"UPVOTE\"}"))
         .andExpect(status().isUnauthorized());
 
-    verify(service, never()).addReaction(any(), any(), any());
+    verify(service, never()).addReactionWithOutcome(any(), any(), any());
   }
 
   @Test
@@ -162,17 +176,19 @@ class ReactionControllerTest {
             .content("{\"reactionType\": \"UPVOTE\"}"))
         .andExpect(status().isUnauthorized());
 
-    verify(service, never()).addReaction(any(), any(), any());
+    verify(service, never()).addReactionWithOutcome(any(), any(), any());
   }
 
   @Test
   void addEmojiReactionShouldWork() throws Exception {
     reaction.setReactionType(ReactionType.FIRE);
-    when(service.addReaction(
+    when(service.addReactionWithOutcome(
         eq(messageId),
         eq(userId),
         eq(ReactionType.FIRE)
-    )).thenReturn(reaction);
+    )).thenReturn(new ReactionService.AddReactionResult(
+        ReactionService.AddReactionOutcome.ADDED, reaction));
+    when(messageService.findById(messageId)).thenReturn(message);
 
     mockMvc.perform(post("/api/messages/{messageId}/reactions", messageId)
             .with(authenticatedJwt())
@@ -181,7 +197,7 @@ class ReactionControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.reactionType").value("FIRE"));
 
-    verify(service).addReaction(messageId, userId, ReactionType.FIRE);
+    verify(service).addReactionWithOutcome(messageId, userId, ReactionType.FIRE);
   }
 
   @Test
@@ -309,11 +325,13 @@ class ReactionControllerTest {
       typedReaction.setUserId(userId);
       typedReaction.setMessage(message);
 
-      when(service.addReaction(
+      when(service.addReactionWithOutcome(
           eq(messageId),
           eq(userId),
           eq(reactionType)
-      )).thenReturn(typedReaction);
+      )).thenReturn(new ReactionService.AddReactionResult(
+          ReactionService.AddReactionOutcome.ADDED, typedReaction));
+      when(messageService.findById(messageId)).thenReturn(message);
 
       mockMvc.perform(post("/api/messages/{messageId}/reactions", messageId)
               .with(authenticatedJwt())

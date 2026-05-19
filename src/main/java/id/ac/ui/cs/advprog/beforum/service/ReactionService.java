@@ -31,9 +31,16 @@ public class ReactionService {
 
   @Transactional
   public Reaction addReaction(UUID messageId, UUID userId, ReactionType reactionType) {
+    AddReactionResult result = addReactionWithOutcome(messageId, userId, reactionType);
+    return result.outcome() == AddReactionOutcome.ADDED ? result.reaction() : null;
+  }
+
+  @Transactional
+  public AddReactionResult addReactionWithOutcome(
+      UUID messageId, UUID userId, ReactionType reactionType) {
     Optional<Message> messageOpt = messageRepository.findById(messageId);
     if (messageOpt.isEmpty()) {
-      return null;
+      return new AddReactionResult(AddReactionOutcome.MESSAGE_NOT_FOUND, null);
     }
 
     // Use strategy pattern to handle type-specific behavior
@@ -42,7 +49,7 @@ public class ReactionService {
 
     // If behavior returns false, reaction was toggled off (deleted)
     if (!shouldAdd) {
-      return null;
+      return new AddReactionResult(AddReactionOutcome.TOGGLED_OFF, null);
     }
 
     // Add the new reaction
@@ -50,7 +57,9 @@ public class ReactionService {
     reaction.setReactionType(reactionType);
     reaction.setUserId(userId);
     reaction.setMessage(messageOpt.get());
-    return reactionRepository.save(reaction);
+    return new AddReactionResult(
+        AddReactionOutcome.ADDED,
+        reactionRepository.save(reaction));
   }
 
   @Transactional
@@ -92,6 +101,15 @@ public class ReactionService {
       );
     }
     return counts;
+  }
+
+  public enum AddReactionOutcome {
+    ADDED,
+    TOGGLED_OFF,
+    MESSAGE_NOT_FOUND
+  }
+
+  public record AddReactionResult(AddReactionOutcome outcome, Reaction reaction) {
   }
 
   @Transactional(readOnly = true)
