@@ -2,9 +2,12 @@ package id.ac.ui.cs.advprog.beforum.controller;
 
 import id.ac.ui.cs.advprog.beforum.dto.ReactionRequest;
 import id.ac.ui.cs.advprog.beforum.dto.ReactionResponse;
+import id.ac.ui.cs.advprog.beforum.model.Message;
 import id.ac.ui.cs.advprog.beforum.model.Reaction;
 import id.ac.ui.cs.advprog.beforum.model.ReactionType;
 import id.ac.ui.cs.advprog.beforum.security.JwtUserExtractor;
+import id.ac.ui.cs.advprog.beforum.service.CacheInvalidationService;
+import id.ac.ui.cs.advprog.beforum.service.MessageService;
 import id.ac.ui.cs.advprog.beforum.service.ReactionService;
 import java.util.List;
 import java.util.Map;
@@ -26,15 +29,23 @@ import org.springframework.web.bind.annotation.RestController;
 public class ReactionController {
 
   private final ReactionService service;
+  private final MessageService messageService;
+  private final CacheInvalidationService cacheInvalidationService;
   private final JwtUserExtractor userExtractor;
 
-  public ReactionController(ReactionService service, JwtUserExtractor userExtractor) {
+  public ReactionController(
+      ReactionService service,
+      MessageService messageService,
+      CacheInvalidationService cacheInvalidationService,
+      JwtUserExtractor userExtractor) {
     this.service = service;
+    this.messageService = messageService;
+    this.cacheInvalidationService = cacheInvalidationService;
     this.userExtractor = userExtractor;
   }
 
   @PostMapping
-  public ResponseEntity<ReactionResponse> addReaction(
+  public ResponseEntity<?> addReaction(
       @AuthenticationPrincipal Jwt jwt,
       @PathVariable UUID messageId,
       @RequestBody ReactionRequest req) {
@@ -43,11 +54,21 @@ public class ReactionController {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
 
-    Reaction reaction = service.addReaction(messageId, userId, req.reactionType());
-    if (reaction == null) {
+    ReactionService.AddReactionResult result =
+        service.addReactionWithOutcome(messageId, userId, req.reactionType());
+
+    if (result.outcome() == ReactionService.AddReactionOutcome.MESSAGE_NOT_FOUND) {
       return ResponseEntity.notFound().build();
     }
-    return ResponseEntity.ok(toResponse(reaction));
+
+    Message message = messageService.findById(messageId);
+    cacheInvalidationService.evictForMessageMutation(message);
+
+    if (result.outcome() == ReactionService.AddReactionOutcome.TOGGLED_OFF) {
+      return ResponseEntity.noContent().build();
+    }
+
+    return ResponseEntity.ok(toResponse(result.reaction()));
   }
 
   @DeleteMapping
@@ -64,6 +85,10 @@ public class ReactionController {
     if (!removed) {
       return ResponseEntity.notFound().build();
     }
+
+    Message message = messageService.findById(messageId);
+    cacheInvalidationService.evictForMessageMutation(message);
+
     return ResponseEntity.noContent().build();
   }
 
