@@ -22,9 +22,6 @@ public class MessageAuthorizationValidator {
 
   public void validateCanUpdate(Message message, UUID userId, Jwt jwt)
       throws UnauthorizedException {
-    if (roleService.isAdmin(jwt)) {
-      throw new UnauthorizedException("You're not allowed to edit this message");
-    }
     if (!authService.isOwner(message, userId)) {
       throw new UnauthorizedException("You're not allowed to edit this message");
     }

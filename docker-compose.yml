@@ -27,16 +27,24 @@ services:
       retries: 5
 
   app:
-    image: ${DOCKER_HUB_USERNAME}/${DOCKER_HUB_REPO_NAME}:latest
+    image: ${DOCKER_HUB_USERNAME}/${DOCKER_HUB_REPO_NAME}:${IMAGE_TAG:-latest}
     environment:
       - DB_URL=jdbc:postgresql://db:5432/${POSTGRES_DB}
       - DB_USERNAME=${POSTGRES_USER}
       - DB_PASSWORD=${POSTGRES_PASSWORD}
-      - AUTH_BACKEND_URL=${AUTH_BACKEND_URL}
       - SUPABASE_URL=${SUPABASE_URL}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - OTEL_SERVICE_NAME=be-forum
+      - OTEL_ENVIRONMENT=prod
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
+      - OTEL_LOGS_ENDPOINT=${OTEL_LOGS_ENDPOINT}
+      - OTEL_TRACE_SAMPLING_PROBABILITY=1.0
+      - OTEL_JAVA_GLOBAL_AUTOCONFIGURE_ENABLED=true
+      - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=${OTEL_LOGS_ENDPOINT}
+      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
     ports:
       - "8080:8080"
     depends_on:
@@ -44,6 +52,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 volumes:
   beforum-db-data:
