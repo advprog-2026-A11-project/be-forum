@@ -1,0 +1,287 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: be-forum EC2 Ubuntu 24.04 with Docker, Docker Compose, and Git
+
+Parameters:
+  InstanceName:
+    Type: String
+    Default: be-forum-ec2
+  ProjectTag:
+    Type: String
+    Default: be-forum
+  EnvTag:
+    Type: String
+    Default: dev
+
+  AmiId:
+    Type: AWS::EC2::Image::Id
+  InstanceType:
+    Type: String
+    Default: t3.medium
+  RootVolumeGiB:
+    Type: Number
+    Default: 30
+    MinValue: 8
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+
+  KeyPairName:
+    Type: AWS::EC2::KeyPair::KeyName
+
+  SecurityGroupName:
+    Type: String
+    Default: be-forum-sg
+  ExistingSecurityGroupId:
+    Type: String
+    Default: ""
+
+  Port1:
+    Type: Number
+    Default: -1
+  Port2:
+    Type: Number
+    Default: -1
+  Port3:
+    Type: Number
+    Default: -1
+  Port4:
+    Type: Number
+    Default: -1
+  Port5:
+    Type: Number
+    Default: -1
+  Port6:
+    Type: Number
+    Default: -1
+  Port7:
+    Type: Number
+    Default: -1
+  Port8:
+    Type: Number
+    Default: -1
+  Port9:
+    Type: Number
+    Default: -1
+  Port10:
+    Type: Number
+    Default: -1
+
+  EipAllocationId:
+    Type: String
+    Default: ""
+
+Conditions:
+  CreateSecurityGroup: !Equals [!Ref ExistingSecurityGroupId, ""]
+  AttachEip: !Not [!Equals [!Ref EipAllocationId, ""]]
+
+  HasPort1: !Not [!Equals [!Ref Port1, -1]]
+  HasPort2: !Not [!Equals [!Ref Port2, -1]]
+  HasPort3: !Not [!Equals [!Ref Port3, -1]]
+  HasPort4: !Not [!Equals [!Ref Port4, -1]]
+  HasPort5: !Not [!Equals [!Ref Port5, -1]]
+  HasPort6: !Not [!Equals [!Ref Port6, -1]]
+  HasPort7: !Not [!Equals [!Ref Port7, -1]]
+  HasPort8: !Not [!Equals [!Ref Port8, -1]]
+  HasPort9: !Not [!Equals [!Ref Port9, -1]]
+  HasPort10: !Not [!Equals [!Ref Port10, -1]]
+
+  CreatePort1Ingress: !And [!Condition CreateSecurityGroup, !Condition HasPort1]
+  CreatePort2Ingress: !And [!Condition CreateSecurityGroup, !Condition HasPort2]
+  CreatePort3Ingress: !And [!Condition CreateSecurityGroup, !Condition HasPort3]
+  CreatePort4Ingress: !And [!Condition CreateSecurityGroup, !Condition HasPort4]
+  CreatePort5Ingress: !And [!Condition CreateSecurityGroup, !Condition HasPort5]
+  CreatePort6Ingress: !And [!Condition CreateSecurityGroup, !Condition HasPort6]
+  CreatePort7Ingress: !And [!Condition CreateSecurityGroup, !Condition HasPort7]
+  CreatePort8Ingress: !And [!Condition CreateSecurityGroup, !Condition HasPort8]
+  CreatePort9Ingress: !And [!Condition CreateSecurityGroup, !Condition HasPort9]
+  CreatePort10Ingress: !And [!Condition CreateSecurityGroup, !Condition HasPort10]
+
+Resources:
+  ForumSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Condition: CreateSecurityGroup
+    Properties:
+      GroupName: !Ref SecurityGroupName
+      GroupDescription: Security group for be-forum EC2
+      VpcId: !Ref VpcId
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+
+  Port1Ingress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreatePort1Ingress
+    Properties:
+      GroupId: !Ref ForumSecurityGroup
+      IpProtocol: tcp
+      FromPort: !Ref Port1
+      ToPort: !Ref Port1
+      CidrIp: 0.0.0.0/0
+
+  Port2Ingress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreatePort2Ingress
+    Properties:
+      GroupId: !Ref ForumSecurityGroup
+      IpProtocol: tcp
+      FromPort: !Ref Port2
+      ToPort: !Ref Port2
+      CidrIp: 0.0.0.0/0
+
+  Port3Ingress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreatePort3Ingress
+    Properties:
+      GroupId: !Ref ForumSecurityGroup
+      IpProtocol: tcp
+      FromPort: !Ref Port3
+      ToPort: !Ref Port3
+      CidrIp: 0.0.0.0/0
+
+  Port4Ingress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreatePort4Ingress
+    Properties:
+      GroupId: !Ref ForumSecurityGroup
+      IpProtocol: tcp
+      FromPort: !Ref Port4
+      ToPort: !Ref Port4
+      CidrIp: 0.0.0.0/0
+
+  Port5Ingress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreatePort5Ingress
+    Properties:
+      GroupId: !Ref ForumSecurityGroup
+      IpProtocol: tcp
+      FromPort: !Ref Port5
+      ToPort: !Ref Port5
+      CidrIp: 0.0.0.0/0
+
+  Port6Ingress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreatePort6Ingress
+    Properties:
+      GroupId: !Ref ForumSecurityGroup
+      IpProtocol: tcp
+      FromPort: !Ref Port6
+      ToPort: !Ref Port6
+      CidrIp: 0.0.0.0/0
+
+  Port7Ingress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreatePort7Ingress
+    Properties:
+      GroupId: !Ref ForumSecurityGroup
+      IpProtocol: tcp
+      FromPort: !Ref Port7
+      ToPort: !Ref Port7
+      CidrIp: 0.0.0.0/0
+
+  Port8Ingress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreatePort8Ingress
+    Properties:
+      GroupId: !Ref ForumSecurityGroup
+      IpProtocol: tcp
+      FromPort: !Ref Port8
+      ToPort: !Ref Port8
+      CidrIp: 0.0.0.0/0
+
+  Port9Ingress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreatePort9Ingress
+    Properties:
+      GroupId: !Ref ForumSecurityGroup
+      IpProtocol: tcp
+      FromPort: !Ref Port9
+      ToPort: !Ref Port9
+      CidrIp: 0.0.0.0/0
+
+  Port10Ingress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreatePort10Ingress
+    Properties:
+      GroupId: !Ref ForumSecurityGroup
+      IpProtocol: tcp
+      FromPort: !Ref Port10
+      ToPort: !Ref Port10
+      CidrIp: 0.0.0.0/0
+
+  Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AmiId
+      InstanceType: !Ref InstanceType
+      SubnetId: !Ref SubnetId
+      KeyName: !Ref KeyPairName
+      SecurityGroupIds:
+        - !If [CreateSecurityGroup, !Ref ForumSecurityGroup, !Ref ExistingSecurityGroupId]
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeType: gp3
+            VolumeSize: !Ref RootVolumeGiB
+            DeleteOnTermination: true
+            Encrypted: true
+      Tags:
+        - Key: Name
+          Value: !Ref InstanceName
+        - Key: Project
+          Value: !Ref ProjectTag
+        - Key: Environment
+          Value: !Ref EnvTag
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          set -euxo pipefail
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update
+          apt-get install -y ca-certificates curl gnupg lsb-release git
+
+          install -m 0755 -d /etc/apt/keyrings
+          if [ ! -f /etc/apt/keyrings/docker.gpg ]; then
+            curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+          fi
+          chmod a+r /etc/apt/keyrings/docker.gpg
+
+          ARCH=$(dpkg --print-architecture)
+          CODENAME=$( . /etc/os-release && echo "$VERSION_CODENAME" )
+          echo "deb [arch=${ARCH} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu ${CODENAME} stable" > /etc/apt/sources.list.d/docker.list
+
+          apt-get update
+          apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+          systemctl enable docker
+          systemctl start docker
+
+          if id ubuntu >/dev/null 2>&1; then
+            usermod -aG docker ubuntu
+          fi
+
+  EipAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Condition: AttachEip
+    Properties:
+      InstanceId: !Ref Instance
+      AllocationId: !Ref EipAllocationId
+
+Outputs:
+  StackName:
+    Value: !Ref AWS::StackName
+
+  InstanceId:
+    Value: !Ref Instance
+
+  PublicIp:
+    Value: !GetAtt Instance.PublicIp
+
+  PrivateIp:
+    Value: !GetAtt Instance.PrivateIp
+
+  AvailabilityZone:
+    Value: !GetAtt Instance.AvailabilityZone
+
+  SecurityGroupId:
+    Value: !If [CreateSecurityGroup, !Ref ForumSecurityGroup, !Ref ExistingSecurityGroupId]
