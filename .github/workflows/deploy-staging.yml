@@ -29,7 +29,7 @@ jobs:
           host: ${{ secrets.SSH_STAGING_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_KEY }}
-          source: "docker-compose.yml"
+          source: "docker-compose.yml,observability/log-shipper-config.yaml"
           target: "/home/${{ secrets.SSH_USERNAME }}/app"
       - name: Releasing New Version
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17

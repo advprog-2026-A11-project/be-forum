@@ -58,6 +58,21 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
+  log-shipper:
+    image: otel/opentelemetry-collector-contrib:latest
+    user: "0:0"
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    environment:
+      - OTEL_ENVIRONMENT=${OTEL_ENVIRONMENT:-dev}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://host.docker.internal:4318}
+    volumes:
+      - ./observability/log-shipper-config.yaml:/etc/otelcol-contrib/config.yaml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    depends_on:
+      app:
+        condition: service_started
+    restart: unless-stopped
+
 volumes:
   beforum-db-data:
   beforum-redis-data:
