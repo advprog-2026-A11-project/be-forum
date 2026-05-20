@@ -22,13 +22,16 @@ public class CacheConfig {
     ObjectMapper mapper = new ObjectMapper();
     mapper.registerModule(new JavaTimeModule());
     mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+    GenericJackson2JsonRedisSerializer serializer = GenericJackson2JsonRedisSerializer.builder()
+        .objectMapper(mapper)
+        .defaultTyping(true)
+        .build();
 
     RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
         .serializeKeysWith(
             RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
         .serializeValuesWith(
-            RedisSerializationContext.SerializationPair.fromSerializer(
-                new GenericJackson2JsonRedisSerializer(mapper)));
+            RedisSerializationContext.SerializationPair.fromSerializer(serializer));
 
     return RedisCacheManager.builder(connectionFactory)
         .cacheDefaults(config)
