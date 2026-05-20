@@ -14,14 +14,27 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+  redis:
+    image: redis:7-alpine
+    expose:
+      - "6379"
+    volumes:
+      - beforum-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   app:
-    image: ${DOCKER_HUB_USERNAME}/${DOCKER_HUB_REPO_NAME}:latest
+    image: ${DOCKER_HUB_USERNAME}/${DOCKER_HUB_REPO_NAME}:${IMAGE_TAG:-latest}
     environment:
       - DB_URL=jdbc:postgresql://db:5432/${POSTGRES_DB}
       - DB_USERNAME=${POSTGRES_USER}
       - DB_PASSWORD=${POSTGRES_PASSWORD}
       - SUPABASE_URL=${SUPABASE_URL}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
       - OTEL_SERVICE_NAME=be-forum
       - OTEL_ENVIRONMENT=prod
@@ -37,8 +50,11 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
 volumes:
   beforum-db-data:
+  beforum-redis-data:

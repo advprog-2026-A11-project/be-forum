@@ -7,6 +7,8 @@ import id.ac.ui.cs.advprog.beforum.dto.CreateMessageRequest;
 import id.ac.ui.cs.advprog.beforum.dto.MessageResponse;
 import id.ac.ui.cs.advprog.beforum.model.Message;
 import id.ac.ui.cs.advprog.beforum.security.JwtUserExtractor;
+import id.ac.ui.cs.advprog.beforum.service.CacheInvalidationService;
+import id.ac.ui.cs.advprog.beforum.service.MessageQueryCacheService;
 import id.ac.ui.cs.advprog.beforum.service.MessageService;
 import java.util.List;
 import java.util.UUID;
@@ -29,22 +31,28 @@ import org.springframework.web.bind.annotation.RestController;
 public class MessageController {
 
   private final MessageService service;
+  private final MessageQueryCacheService queryCacheService;
   private final JwtUserExtractor userExtractor;
   private final MessageRequestValidator requestValidator;
   private final MessageAuthorizationValidator authorizationValidator;
   private final MessageResponseMapper responseMapper;
+  private final CacheInvalidationService cacheInvalidationService;
 
   public MessageController(
       MessageService service,
+      MessageQueryCacheService queryCacheService,
       JwtUserExtractor userExtractor,
       MessageRequestValidator requestValidator,
       MessageAuthorizationValidator authorizationValidator,
-      MessageResponseMapper responseMapper) {
+      MessageResponseMapper responseMapper,
+      CacheInvalidationService cacheInvalidationService) {
     this.service = service;
+    this.queryCacheService = queryCacheService;
     this.userExtractor = userExtractor;
     this.requestValidator = requestValidator;
     this.authorizationValidator = authorizationValidator;
     this.responseMapper = responseMapper;
+    this.cacheInvalidationService = cacheInvalidationService;
   }
 
   @PostMapping
@@ -61,22 +69,23 @@ public class MessageController {
     }
 
     Message created = service.createMessage(req.content(), req.readingId(), userId);
+    cacheInvalidationService.evictForNewMessage(created);
     return ResponseEntity.ok(responseMapper.toResponse(created));
   }
 
   @GetMapping
   public ResponseEntity<List<MessageResponse>> list(
       @RequestParam(required = false) String readingId) {
-    return ResponseEntity.ok(responseMapper.toResponses(service.listMessages(readingId)));
+    return ResponseEntity.ok(queryCacheService.listMessagesDto(readingId));
   }
 
   @GetMapping("/{id}")
   public ResponseEntity<MessageResponse> getById(@PathVariable UUID id) {
-    Message message = service.findByIdWithReplies(id);
-    if (message == null) {
+    MessageResponse response = queryCacheService.getMessageDetailDto(id);
+    if (response == null) {
       return ResponseEntity.notFound().build();
     }
-    return ResponseEntity.ok(responseMapper.toResponse(message));
+    return ResponseEntity.ok(response);
   }
 
   @PutMapping("/{id}")
@@ -100,6 +109,7 @@ public class MessageController {
     if (updated == null) {
       return ResponseEntity.notFound().build();
     }
+    cacheInvalidationService.evictForMessageMutation(updated);
     return ResponseEntity.ok(responseMapper.toResponse(updated));
   }
 
@@ -120,6 +130,7 @@ public class MessageController {
     authorizationValidator.validateCanDelete(message, userId, jwt);
 
     service.deleteMessage(id);
+    cacheInvalidationService.evictForMessageMutation(message);
     return ResponseEntity.noContent().build();
   }
 }
