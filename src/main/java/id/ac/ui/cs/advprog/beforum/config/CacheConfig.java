@@ -22,10 +22,8 @@ public class CacheConfig {
     ObjectMapper mapper = new ObjectMapper();
     mapper.registerModule(new JavaTimeModule());
     mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-    GenericJackson2JsonRedisSerializer serializer = GenericJackson2JsonRedisSerializer.builder()
-        .objectMapper(mapper)
-        .defaultTyping(true)
-        .build();
+    GenericJackson2JsonRedisSerializer.registerNullValueSerializer(mapper, "@class");
+    GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer(mapper);
 
     RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
         .serializeKeysWith(
