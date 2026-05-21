@@ -49,6 +49,7 @@ public class Message {
   private List<Reaction> reactions = new ArrayList<>();
 
   public Message() {
+    // Required by JPA.
   }
 
   public UUID getId() {
