@@ -42,11 +42,8 @@ services:
       - OTEL_SERVICE_NAME=be-forum
       - OTEL_ENVIRONMENT=${OTEL_ENVIRONMENT:-dev}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://host.docker.internal:4318}
-      - OTEL_LOGS_ENDPOINT=${OTEL_LOGS_ENDPOINT:-http://host.docker.internal:4318/v1/logs}
       - OTEL_TRACE_SAMPLING_PROBABILITY=${OTEL_TRACE_SAMPLING_PROBABILITY:-1.0}
       - OTEL_JAVA_GLOBAL_AUTOCONFIGURE_ENABLED=true
-      - OTEL_LOGS_EXPORTER=otlp
-      - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=${OTEL_LOGS_ENDPOINT:-http://host.docker.internal:4318/v1/logs}
       - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
     ports:
       - "8081:8080"
@@ -57,6 +54,21 @@ services:
         condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+  alloy:
+    image: grafana/alloy:latest
+    command: ["run", "/etc/alloy/config.alloy"]
+    environment:
+      - OTEL_ENVIRONMENT=${OTEL_ENVIRONMENT:-dev}
+      - LOKI_PUSH_URL=${LOKI_PUSH_URL:-http://host.docker.internal:3100/loki/api/v1/push}
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      app:
+        condition: service_started
 
 volumes:
   beforum-db-data:
