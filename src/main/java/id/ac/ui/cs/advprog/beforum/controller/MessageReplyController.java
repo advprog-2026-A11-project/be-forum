@@ -8,6 +8,8 @@ import id.ac.ui.cs.advprog.beforum.dto.MessageResponse;
 import id.ac.ui.cs.advprog.beforum.model.Message;
 import id.ac.ui.cs.advprog.beforum.security.JwtUserExtractor;
 import id.ac.ui.cs.advprog.beforum.service.CacheInvalidationService;
+import id.ac.ui.cs.advprog.beforum.service.CacheMetricsService;
+import id.ac.ui.cs.advprog.beforum.service.ForumMetricsService;
 import id.ac.ui.cs.advprog.beforum.service.MessageQueryCacheService;
 import id.ac.ui.cs.advprog.beforum.service.MessageService;
 import java.util.List;
@@ -36,6 +38,8 @@ public class MessageReplyController {
   private final MessageAuthorizationValidator authorizationValidator;
   private final MessageResponseMapper responseMapper;
   private final CacheInvalidationService cacheInvalidationService;
+  private final CacheMetricsService cacheMetricsService;
+  private final ForumMetricsService forumMetricsService;
 
   public MessageReplyController(
       MessageService service,
@@ -44,7 +48,9 @@ public class MessageReplyController {
       MessageAuthorizationService authorizationService,
       MessageAuthorizationValidator authorizationValidator,
       MessageResponseMapper responseMapper,
-      CacheInvalidationService cacheInvalidationService) {
+      CacheInvalidationService cacheInvalidationService,
+      CacheMetricsService cacheMetricsService,
+      ForumMetricsService forumMetricsService) {
     this.service = service;
     this.queryCacheService = queryCacheService;
     this.userExtractor = userExtractor;
@@ -52,6 +58,8 @@ public class MessageReplyController {
     this.authorizationValidator = authorizationValidator;
     this.responseMapper = responseMapper;
     this.cacheInvalidationService = cacheInvalidationService;
+    this.cacheMetricsService = cacheMetricsService;
+    this.forumMetricsService = forumMetricsService;
   }
 
   @PostMapping
@@ -69,15 +77,18 @@ public class MessageReplyController {
       return ResponseEntity.notFound().build();
     }
     cacheInvalidationService.evictForMessageMutation(reply);
+    forumMetricsService.incrementCreated();
     return ResponseEntity.ok(responseMapper.toResponse(reply));
   }
 
   @GetMapping
   public ResponseEntity<List<MessageResponse>> getReplies(@PathVariable UUID parentId) {
+    cacheMetricsService.recordRepliesAccess(parentId);
     List<MessageResponse> replies = queryCacheService.getRepliesDto(parentId);
     if (replies == null) {
       return ResponseEntity.notFound().build();
     }
+    forumMetricsService.incrementFetched();
     return ResponseEntity.ok(replies);
   }
 
@@ -104,6 +115,7 @@ public class MessageReplyController {
       return ResponseEntity.notFound().build();
     }
     cacheInvalidationService.evictForMessageMutation(updated);
+    forumMetricsService.incrementUpdated();
     return ResponseEntity.ok(responseMapper.toResponse(updated));
   }
 
@@ -126,6 +138,7 @@ public class MessageReplyController {
 
     service.deleteMessage(replyId);
     cacheInvalidationService.evictForMessageMutation(reply);
+    forumMetricsService.incrementDeleted();
     return ResponseEntity.noContent().build();
   }
 }

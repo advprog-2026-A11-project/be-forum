@@ -58,6 +58,21 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
+  alloy:
+    image: grafana/alloy:latest
+    command: ["run", "/etc/alloy/config.alloy"]
+    environment:
+      - OTEL_ENVIRONMENT=${OTEL_ENVIRONMENT:-dev}
+      - LOKI_PUSH_URL=${LOKI_PUSH_URL:-http://host.docker.internal:3100/loki/api/v1/push}
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      app:
+        condition: service_started
+
 volumes:
   beforum-db-data:
   beforum-redis-data:

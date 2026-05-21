@@ -1,0 +1,20 @@
+discovery.docker "be_forum" {
+  host = "unix:///var/run/docker.sock"
+}
+
+loki.source.docker "be_forum" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.docker.be_forum.targets
+  labels     = {"service_name" = "be-forum", "log_source" = "docker"}
+  forward_to = [loki.write.remote.receiver]
+}
+
+loki.write "remote" {
+  endpoint {
+    url = sys.env("LOKI_PUSH_URL")
+  }
+  external_labels = {
+    deployment_environment = sys.env("OTEL_ENVIRONMENT"),
+    stack                  = "be-forum",
+  }
+}

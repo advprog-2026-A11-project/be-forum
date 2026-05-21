@@ -15,6 +15,7 @@ import id.ac.ui.cs.advprog.beforum.dto.CreateMessageRequest;
 import id.ac.ui.cs.advprog.beforum.dto.MessageResponse;
 import id.ac.ui.cs.advprog.beforum.security.JwtUserExtractor;
 import id.ac.ui.cs.advprog.beforum.service.CacheInvalidationService;
+import id.ac.ui.cs.advprog.beforum.service.ForumMetricsService;
 import id.ac.ui.cs.advprog.beforum.service.MessageQueryCacheService;
 import id.ac.ui.cs.advprog.beforum.service.MessageService;
 import java.util.UUID;
@@ -66,6 +67,7 @@ class MessageControllerUnitTest {
             new MessageAuthorizationService(),
             mock()),
         new MessageResponseMapper(),
-        mock(CacheInvalidationService.class));
+        mock(CacheInvalidationService.class),
+        mock(ForumMetricsService.class));
   }
 }

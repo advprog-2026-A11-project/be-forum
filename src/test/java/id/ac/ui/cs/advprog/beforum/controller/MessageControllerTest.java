@@ -24,6 +24,7 @@ import id.ac.ui.cs.advprog.beforum.security.JwtUserExtractor;
 import id.ac.ui.cs.advprog.beforum.security.RoleAuthorizationService;
 import id.ac.ui.cs.advprog.beforum.security.SecurityConfig;
 import id.ac.ui.cs.advprog.beforum.service.CacheInvalidationService;
+import id.ac.ui.cs.advprog.beforum.service.ForumMetricsService;
 import id.ac.ui.cs.advprog.beforum.service.MessageQueryCacheService;
 import id.ac.ui.cs.advprog.beforum.service.MessageService;
 import java.time.OffsetDateTime;
@@ -65,6 +66,9 @@ class MessageControllerTest {
 
   @MockBean
   private CacheInvalidationService cacheInvalidationService;
+
+  @MockBean
+  private ForumMetricsService forumMetricsService;
 
   @MockBean
   private JwtDecoder jwtDecoder;
