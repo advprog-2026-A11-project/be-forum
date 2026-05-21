@@ -42,6 +42,7 @@ public class MessageController {
   private final CacheMetricsService cacheMetricsService;
   private final ForumMetricsService forumMetricsService;
 
+  @SuppressWarnings("java:S107")
   public MessageController(
       MessageService service,
       MessageQueryCacheService queryCacheService,

@@ -104,11 +104,11 @@ class MessageTest {
   }
 
   @Test
-  void allArgsConstructorAndAccessorsShouldPreserveValues() {
-    UUID id = UUID.randomUUID();
-    Integer version = 2;
-    OffsetDateTime createdAt = OffsetDateTime.now().minusDays(1);
-    UUID userId = UUID.randomUUID();
+  void accessorsShouldPreserveValues() {
+    final UUID id = UUID.randomUUID();
+    final Integer version = 2;
+    final OffsetDateTime createdAt = OffsetDateTime.now().minusDays(1);
+    final UUID userId = UUID.randomUUID();
 
     Message parent = new Message();
     UUID parentId = UUID.randomUUID();
@@ -124,16 +124,16 @@ class MessageTest {
     List<Reaction> reactions = new ArrayList<>();
     reactions.add(reaction);
 
-    Message message = new Message(
-        id,
-        version,
-        "constructed",
-        createdAt,
-        "reading-xyz",
-        userId,
-        parent,
-        replies,
-        reactions);
+    Message message = new Message();
+    message.setId(id);
+    message.setVersion(version);
+    message.setContent("constructed");
+    message.setCreatedAt(createdAt);
+    message.setReadingId("reading-xyz");
+    message.setUserId(userId);
+    message.setParent(parent);
+    message.setReplies(replies);
+    message.setReactions(reactions);
 
     assertEquals(id, message.getId());
     assertEquals(version, message.getVersion());

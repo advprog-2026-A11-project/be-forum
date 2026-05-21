@@ -12,6 +12,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class MessageService {
 
+  private static final String DB_OP_READ = "read";
+  private static final String DB_OP_WRITE = "write";
+  private static final String REPO_SAVE = "MessageRepository.save";
+  private static final String REPO_FIND_BY_ID = "MessageRepository.findById";
+
   private final MessageRepository repository;
   private final ForumMetricsService forumMetricsService;
 
@@ -30,7 +35,7 @@ public class MessageService {
     message.setContent(content);
     message.setReadingId(readingId.trim());
     message.setUserId(userId);
-    forumMetricsService.incrementDbOperation("write", "MessageRepository.save");
+    forumMetricsService.incrementDbOperation(DB_OP_WRITE, REPO_SAVE);
     return repository.save(message);
   }
 
@@ -38,29 +43,29 @@ public class MessageService {
   public List<Message> listMessages(String readingId) {
     if (readingId == null || readingId.isBlank()) {
       forumMetricsService.incrementDbOperation(
-          "read",
+          DB_OP_READ,
           "MessageRepository.findTopLevelOrderByCreatedAtDesc");
       return repository.findTopLevelOrderByCreatedAtDesc();
     }
     forumMetricsService.incrementDbOperation(
-        "read",
+        DB_OP_READ,
         "MessageRepository.findTopLevelByReadingIdOrderByCreatedAtDesc");
     return repository.findTopLevelByReadingIdOrderByCreatedAtDesc(readingId.trim());
   }
 
   @Transactional(readOnly = true)
   public Message findById(UUID id) {
-    forumMetricsService.incrementDbOperation("read", "MessageRepository.findById");
+    forumMetricsService.incrementDbOperation(DB_OP_READ, REPO_FIND_BY_ID);
     return repository.findById(id).orElse(null);
   }
 
   @Transactional
   public Message updateMessage(UUID id, String content) {
-    forumMetricsService.incrementDbOperation("read", "MessageRepository.findById");
+    forumMetricsService.incrementDbOperation(DB_OP_READ, REPO_FIND_BY_ID);
     return repository.findById(id)
         .map(m -> {
           m.setContent(content);
-          forumMetricsService.incrementDbOperation("write", "MessageRepository.save");
+          forumMetricsService.incrementDbOperation(DB_OP_WRITE, REPO_SAVE);
           return repository.save(m);
         })
         .orElse(null);
@@ -68,13 +73,13 @@ public class MessageService {
 
   @Transactional
   public void deleteMessage(UUID id) {
-    forumMetricsService.incrementDbOperation("write", "MessageRepository.deleteById");
+    forumMetricsService.incrementDbOperation(DB_OP_WRITE, "MessageRepository.deleteById");
     repository.deleteById(id);
   }
 
   @Transactional
   public Message createReply(UUID parentId, String content, UUID userId) {
-    forumMetricsService.incrementDbOperation("read", "MessageRepository.findById");
+    forumMetricsService.incrementDbOperation(DB_OP_READ, REPO_FIND_BY_ID);
     return repository.findById(parentId)
         .map(parent -> {
           Message reply = new Message();
@@ -82,7 +87,7 @@ public class MessageService {
           reply.setReadingId(parent.getReadingId());
           reply.setUserId(userId);
           reply.setParent(parent);
-          forumMetricsService.incrementDbOperation("write", "MessageRepository.save");
+          forumMetricsService.incrementDbOperation(DB_OP_WRITE, REPO_SAVE);
           return repository.save(reply);
         })
         .orElse(null);
@@ -91,14 +96,14 @@ public class MessageService {
   @Transactional(readOnly = true)
   public List<Message> getReplies(UUID parentId) {
     forumMetricsService.incrementDbOperation(
-        "read",
+        DB_OP_READ,
         "MessageRepository.findByParentIdOrderByCreatedAtAsc");
     return repository.findByParentIdOrderByCreatedAtAsc(parentId);
   }
 
   @Transactional(readOnly = true)
   public Message findByIdWithReplies(UUID id) {
-    forumMetricsService.incrementDbOperation("read", "MessageRepository.findByIdWithReplies");
+    forumMetricsService.incrementDbOperation(DB_OP_READ, "MessageRepository.findByIdWithReplies");
     return repository.findByIdWithReplies(id).orElse(null);
   }
 
@@ -109,7 +114,7 @@ public class MessageService {
       return counts;
     }
 
-    forumMetricsService.incrementDbOperation("read", "MessageRepository.countRepliesByParentIds");
+    forumMetricsService.incrementDbOperation(DB_OP_READ, "MessageRepository.countRepliesByParentIds");
     List<Object[]> rows = repository.countRepliesByParentIds(parentIds);
     for (Object[] row : rows) {
       UUID parentId = (UUID) row[0];

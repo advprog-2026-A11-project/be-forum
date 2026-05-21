@@ -51,27 +51,6 @@ public class Message {
   public Message() {
   }
 
-  public Message(
-      UUID id,
-      Integer version,
-      String content,
-      OffsetDateTime createdAt,
-      String readingId,
-      UUID userId,
-      Message parent,
-      List<Message> replies,
-      List<Reaction> reactions) {
-    this.id = id;
-    this.version = version;
-    this.content = content;
-    this.createdAt = createdAt;
-    this.readingId = readingId;
-    this.userId = userId;
-    this.parent = parent;
-    this.replies = replies;
-    this.reactions = reactions;
-  }
-
   public UUID getId() {
     return id;
   }
