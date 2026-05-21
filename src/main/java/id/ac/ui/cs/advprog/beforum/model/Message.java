@@ -14,15 +14,7 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
 @Entity
 @Table(name = "messages")
 public class Message {
@@ -55,6 +47,102 @@ public class Message {
 
   @OneToMany(mappedBy = "message", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<Reaction> reactions = new ArrayList<>();
+
+  public Message() {
+  }
+
+  public Message(
+      UUID id,
+      Integer version,
+      String content,
+      OffsetDateTime createdAt,
+      String readingId,
+      UUID userId,
+      Message parent,
+      List<Message> replies,
+      List<Reaction> reactions) {
+    this.id = id;
+    this.version = version;
+    this.content = content;
+    this.createdAt = createdAt;
+    this.readingId = readingId;
+    this.userId = userId;
+    this.parent = parent;
+    this.replies = replies;
+    this.reactions = reactions;
+  }
+
+  public UUID getId() {
+    return id;
+  }
+
+  public void setId(UUID id) {
+    this.id = id;
+  }
+
+  public Integer getVersion() {
+    return version;
+  }
+
+  public void setVersion(Integer version) {
+    this.version = version;
+  }
+
+  public String getContent() {
+    return content;
+  }
+
+  public void setContent(String content) {
+    this.content = content;
+  }
+
+  public OffsetDateTime getCreatedAt() {
+    return createdAt;
+  }
+
+  public void setCreatedAt(OffsetDateTime createdAt) {
+    this.createdAt = createdAt;
+  }
+
+  public String getReadingId() {
+    return readingId;
+  }
+
+  public void setReadingId(String readingId) {
+    this.readingId = readingId;
+  }
+
+  public UUID getUserId() {
+    return userId;
+  }
+
+  public void setUserId(UUID userId) {
+    this.userId = userId;
+  }
+
+  public Message getParent() {
+    return parent;
+  }
+
+  public void setParent(Message parent) {
+    this.parent = parent;
+  }
+
+  public List<Message> getReplies() {
+    return replies;
+  }
+
+  public void setReplies(List<Message> replies) {
+    this.replies = replies;
+  }
+
+  public List<Reaction> getReactions() {
+    return reactions;
+  }
+
+  public void setReactions(List<Reaction> reactions) {
+    this.reactions = reactions;
+  }
 
   public UUID getParentId() {
     return parent != null ? parent.getId() : null;
