@@ -120,6 +120,8 @@ jobs:
           script: |
             set -e
             cd /home/${{ secrets.SSH_USERNAME }}/app
+            export DOCKER_BUILDKIT=1
+            export COMPOSE_DOCKER_CLI_BUILD=1
             IMAGE="$DOCKER_HUB_USERNAME/$DOCKER_HUB_REPO_NAME:$VERSION"
             
             echo "🔄 Starting rollback to version: $VERSION"
