@@ -28,13 +28,14 @@ public class CacheConfig {
         LaissezFaireSubTypeValidator.instance,
         ObjectMapper.DefaultTyping.EVERYTHING,
         JsonTypeInfo.As.PROPERTY);
+    GenericJackson2JsonRedisSerializer.registerNullValueSerializer(mapper, "@class");
+    GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer(mapper);
 
     RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
         .serializeKeysWith(
             RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
         .serializeValuesWith(
-            RedisSerializationContext.SerializationPair.fromSerializer(
-                new GenericJackson2JsonRedisSerializer(mapper)));
+            RedisSerializationContext.SerializationPair.fromSerializer(serializer));
 
     return RedisCacheManager.builder(connectionFactory)
         .cacheDefaults(config)
