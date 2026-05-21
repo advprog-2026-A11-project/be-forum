@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -99,5 +101,57 @@ class MessageTest {
     Message message = new Message();
 
     assertNotNull(message.getId());
+  }
+
+  @Test
+  void accessorsShouldPreserveValues() {
+    final UUID id = UUID.randomUUID();
+    final Integer version = 2;
+    final OffsetDateTime createdAt = OffsetDateTime.now().minusDays(1);
+    final UUID userId = UUID.randomUUID();
+
+    Message parent = new Message();
+    UUID parentId = UUID.randomUUID();
+    parent.setId(parentId);
+
+    Message reply = new Message();
+    reply.setId(UUID.randomUUID());
+    List<Message> replies = new ArrayList<>();
+    replies.add(reply);
+
+    Reaction reaction = new Reaction();
+    reaction.setId(UUID.randomUUID());
+    List<Reaction> reactions = new ArrayList<>();
+    reactions.add(reaction);
+
+    Message message = new Message();
+    message.setId(id);
+    message.setVersion(version);
+    message.setContent("constructed");
+    message.setCreatedAt(createdAt);
+    message.setReadingId("reading-xyz");
+    message.setUserId(userId);
+    message.setParent(parent);
+    message.setReplies(replies);
+    message.setReactions(reactions);
+
+    assertEquals(id, message.getId());
+    assertEquals(version, message.getVersion());
+    assertEquals("constructed", message.getContent());
+    assertEquals(createdAt, message.getCreatedAt());
+    assertEquals("reading-xyz", message.getReadingId());
+    assertEquals(userId, message.getUserId());
+    assertEquals(parent, message.getParent());
+    assertEquals(parentId, message.getParentId());
+    assertEquals(replies, message.getReplies());
+    assertEquals(reactions, message.getReactions());
+
+    message.setVersion(3);
+    message.setReplies(new ArrayList<>());
+    message.setReactions(new ArrayList<>());
+
+    assertEquals(3, message.getVersion());
+    assertTrue(message.getReplies().isEmpty());
+    assertTrue(message.getReactions().isEmpty());
   }
 }

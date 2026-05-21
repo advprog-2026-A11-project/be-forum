@@ -39,11 +39,8 @@ services:
       - OTEL_SERVICE_NAME=be-forum
       - OTEL_ENVIRONMENT=prod
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
-      - OTEL_LOGS_ENDPOINT=${OTEL_LOGS_ENDPOINT}
       - OTEL_TRACE_SAMPLING_PROBABILITY=1.0
       - OTEL_JAVA_GLOBAL_AUTOCONFIGURE_ENABLED=true
-      - OTEL_LOGS_EXPORTER=otlp
-      - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=${OTEL_LOGS_ENDPOINT}
       - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
     ports:
       - "8080:8080"
@@ -55,20 +52,20 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-  log-shipper:
-    image: otel/opentelemetry-collector-contrib:latest
-    user: "0:0"
-    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+  alloy:
+    image: grafana/alloy:latest
+    command: ["run", "/etc/alloy/config.alloy"]
     environment:
-      - OTEL_ENVIRONMENT=prod
-      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
+      - OTEL_ENVIRONMENT=${OTEL_ENVIRONMENT:-prod}
+      - LOKI_PUSH_URL=${LOKI_PUSH_URL:-http://host.docker.internal:3100/loki/api/v1/push}
     volumes:
-      - ./observability/log-shipper-config.yaml:/etc/otelcol-contrib/config.yaml:ro
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       app:
         condition: service_started
-    restart: unless-stopped
 
 volumes:
   beforum-db-data:

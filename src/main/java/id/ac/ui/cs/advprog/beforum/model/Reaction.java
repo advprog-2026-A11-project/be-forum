@@ -11,15 +11,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
 import java.util.UUID;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
 @Entity
 @Table(name = "reactions")
 public class Reaction {
@@ -40,6 +32,62 @@ public class Reaction {
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "message_id", nullable = false)
   private Message message;
+
+  public Reaction() {
+  }
+
+  public Reaction(
+      UUID id,
+      ReactionType reactionType,
+      UUID userId,
+      OffsetDateTime createdAt,
+      Message message) {
+    this.id = id;
+    this.reactionType = reactionType;
+    this.userId = userId;
+    this.createdAt = createdAt;
+    this.message = message;
+  }
+
+  public UUID getId() {
+    return id;
+  }
+
+  public void setId(UUID id) {
+    this.id = id;
+  }
+
+  public ReactionType getReactionType() {
+    return reactionType;
+  }
+
+  public void setReactionType(ReactionType reactionType) {
+    this.reactionType = reactionType;
+  }
+
+  public UUID getUserId() {
+    return userId;
+  }
+
+  public void setUserId(UUID userId) {
+    this.userId = userId;
+  }
+
+  public OffsetDateTime getCreatedAt() {
+    return createdAt;
+  }
+
+  public void setCreatedAt(OffsetDateTime createdAt) {
+    this.createdAt = createdAt;
+  }
+
+  public Message getMessage() {
+    return message;
+  }
+
+  public void setMessage(Message message) {
+    this.message = message;
+  }
 
   public UUID getMessageId() {
     return message != null ? message.getId() : null;

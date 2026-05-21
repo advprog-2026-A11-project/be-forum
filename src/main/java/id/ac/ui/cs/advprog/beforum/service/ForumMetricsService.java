@@ -7,39 +7,59 @@ import org.springframework.stereotype.Service;
 @Service
 public class ForumMetricsService {
 
-  private final Counter messagesCreatedCounter;
-  private final Counter messagesUpdatedCounter;
-  private final Counter messagesDeletedCounter;
-  private final Counter messagesFetchedCounter;
+  private final Counter createdCounter;
+  private final Counter updatedCounter;
+  private final Counter deletedCounter;
+  private final Counter fetchedCounter;
+  private final MeterRegistry meterRegistry;
 
   public ForumMetricsService(MeterRegistry meterRegistry) {
-    this.messagesCreatedCounter = Counter.builder("forum_messages_created_total")
-        .description("Total number of forum messages created")
+    this.meterRegistry = meterRegistry;
+    this.createdCounter = Counter.builder("forum_messages_created_total")
+        .description("Total forum messages created")
         .register(meterRegistry);
-    this.messagesUpdatedCounter = Counter.builder("forum_messages_updated_total")
-        .description("Total number of forum messages updated")
+    this.updatedCounter = Counter.builder("forum_messages_updated_total")
+        .description("Total forum messages updated")
         .register(meterRegistry);
-    this.messagesDeletedCounter = Counter.builder("forum_messages_deleted_total")
-        .description("Total number of forum messages deleted")
+    this.deletedCounter = Counter.builder("forum_messages_deleted_total")
+        .description("Total forum messages deleted")
         .register(meterRegistry);
-    this.messagesFetchedCounter = Counter.builder("forum_messages_fetched_total")
-        .description("Total number of forum message fetch operations")
+    this.fetchedCounter = Counter.builder("forum_messages_fetched_total")
+        .description("Total forum message fetch operations")
         .register(meterRegistry);
   }
 
   public void incrementCreated() {
-    messagesCreatedCounter.increment();
+    createdCounter.increment();
   }
 
   public void incrementUpdated() {
-    messagesUpdatedCounter.increment();
+    updatedCounter.increment();
   }
 
   public void incrementDeleted() {
-    messagesDeletedCounter.increment();
+    deletedCounter.increment();
   }
 
   public void incrementFetched() {
-    messagesFetchedCounter.increment();
+    fetchedCounter.increment();
+  }
+
+  public void incrementDbOperation(String operation, String repositoryMethod) {
+    Counter.builder("forum_db_operations_total")
+        .description("Total forum database operations by operation and repository method")
+        .tag("operation", operation)
+        .tag("repository_method", repositoryMethod)
+        .register(meterRegistry)
+        .increment();
+  }
+
+  public void incrementCacheAccess(String result, String cacheName) {
+    Counter.builder("forum_cache_access_total")
+        .description("Total forum cache accesses by result and cache name")
+        .tag("result", result)
+        .tag("cache_name", cacheName)
+        .register(meterRegistry)
+        .increment();
   }
 }
