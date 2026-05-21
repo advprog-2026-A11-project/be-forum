@@ -2,28 +2,33 @@ FROM docker.io/library/eclipse-temurin:21-jdk-alpine@sha256:cafcfad1d9d3b6e7dd98
 
 WORKDIR /src/tk-adpro
 
-# Increase Gradle wrapper timeout
-ENV GRADLE_OPTS="-Dorg.gradle.wrapper.timeout=600000"
+# Make Gradle downloads more resilient on flaky networks.
+ENV GRADLE_OPTS="-Dorg.gradle.wrapper.timeout=600000 -Dorg.gradle.internal.http.connectionTimeout=120000 -Dorg.gradle.internal.http.socketTimeout=120000 -Dorg.gradle.internal.repository.max.retries=5"
 
 # Copy Gradle wrapper and config first (better layer caching)
 COPY gradlew .
 COPY gradle gradle
 COPY build.gradle.kts settings.gradle.kts ./
+COPY gradle.lockfile ./
 
 RUN chmod +x gradlew
 
-# Download Gradle + dependencies (cached layer)
-RUN ./gradlew --no-daemon --stacktrace dependencies || true
+# Download wrapper and resolve runtime dependencies in a cached layer.
+RUN --mount=type=cache,target=/root/.gradle \
+    ./gradlew --no-daemon --stacktrace -q dependencies --configuration runtimeClasspath
 
 # Copy application source
 COPY src src
 
 # Build jar
-RUN ./gradlew clean bootJar \
-    --no-daemon \
-    --parallel \
-    -x test \
-    -Dorg.gradle.wrapper.timeout=600000
+RUN --mount=type=cache,target=/root/.gradle \
+    sh -ec 'for i in 1 2 3; do \
+      ./gradlew bootJar --no-daemon -x test && exit 0; \
+      echo "Gradle build failed (attempt ${i}/3), retrying in 10s..."; \
+      sleep 10; \
+    done; \
+    echo "Gradle build failed after 3 attempts"; \
+    exit 1'
 
 
 FROM docker.io/library/eclipse-temurin:21-jre-alpine@sha256:4e9ab608d97796571b1d5bbcd1c9f430a89a5f03fe5aa6c093888ceb6756c502 AS runner

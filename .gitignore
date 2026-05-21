@@ -41,3 +41,8 @@ out/
 .env.profiling.host
 
 __pycache__/
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan

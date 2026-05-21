@@ -1,74 +1,78 @@
-# EC2 Provisioning with AWS CloudFormation
+# EC2 Provisioning with Terraform
 
-This folder provisions and destroys a Ubuntu 24.04 EC2 instance through **CloudFormation** (IaC), driven by environment variables.
+This folder provisions AWS infrastructure through Terraform using environment variables.
 
-What gets configured:
-- Region
-- VM sizing (instance type or minimum RAM mapping)
-- Root disk size
-- VPC/subnet
-- Security group (existing SG or CF-created SG)
-- Optional Elastic IP association
-- Bootstrap install of Docker Engine, Docker Compose plugin, and Git
+Provisioning supports:
+1. Create a security group with configurable open ports.
+2. Create an EC2 VM with configurable size and AMI.
+3. Attach the VM to either:
+   - an existing security group, or
+   - a new security group created by Terraform.
+4. Assign an Elastic IP to the VM:
+   - use an existing allocation ID, or
+   - create a new EIP and attach it.
+5. Destroy the VM and related Terraform-managed resources.
 
 ## Prerequisites
 
-- Python 3.10+
-- AWS credentials with permissions for CloudFormation + EC2 + (optional) SSM
+- Terraform `>= 1.5`
+- AWS credentials with EC2/VPC/EIP permissions
 
-Install deps from `be-forum/`:
+## Configure via environment variables
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r provisioning/requirements.txt
-```
-
-## Configure
+Copy:
 
 ```bash
 cp provisioning/.env.example provisioning/.env
 ```
 
-Key variables:
-- `AWS_REGION`
-- `CF_STACK_NAME`
-- `KEY_PAIR_NAME`
-- `INSTANCE_TYPE` or `MIN_RAM_GIB`
-- `ROOT_VOLUME_GB`
-- `VPC_ID`, `SUBNET_ID` (or leave empty to use default)
-- `SECURITY_GROUP_ID` (optional; if empty CF creates SG)
-- `OPEN_PORTS` (comma-separated TCP ports, up to 10)
-- `EIP_ALLOCATION_ID` or `EIP_PUBLIC_IP` (optional)
+`provisioning/.env.example` uses `TF_VAR_*` names so Terraform reads values directly from env vars.
 
-## Provision / update stack
+Load env vars.
 
-```bash
-python provisioning/provision_ec2.py
+PowerShell:
+
+```powershell
+Get-Content provisioning/.env | ForEach-Object {
+  if ($_ -match '^\s*#' -or $_ -notmatch '=') { return }
+  $name, $value = $_ -split '=', 2
+  Set-Item -Path "Env:$name" -Value $value
+}
 ```
 
-Dry run:
+Bash:
 
 ```bash
-DRY_RUN=true python provisioning/provision_ec2.py
+set -a
+source provisioning/.env
+set +a
 ```
 
-## Destroy stack
+## Create infrastructure
 
 ```bash
-python provisioning/destroy_ec2.py
+cd provisioning
+terraform init
+terraform plan -out tfplan
+terraform apply tfplan
 ```
 
-This deletes all resources in the stack (instance, CF-created SG, and EIP association resource).
-
-Use non-interactive mode:
+## Destroy infrastructure (including VM)
 
 ```bash
-DESTROY_FORCE=true python provisioning/destroy_ec2.py
+cd provisioning
+terraform destroy
+```
+
+Optional non-interactive destroy:
+
+```bash
+cd provisioning
+terraform destroy -auto-approve
 ```
 
 ## Notes
 
-- If your IAM role cannot call `ssm:GetParameter` / `ec2:DescribeImages`, set `AMI_ID` explicitly.
-- `KEY_PAIR_NAME` must exist in the same region.
-- CloudFormation template: `provisioning/ec2-stack.yaml`.
+- If `TF_VAR_existing_security_group_id` is empty, Terraform creates a new security group with ports from `TF_VAR_open_ports_csv`.
+- If `TF_VAR_existing_eip_allocation_id` is empty and `TF_VAR_assign_eip=true`, Terraform allocates a new EIP and attaches it.
+- If `TF_VAR_vpc_id` and `TF_VAR_subnet_id` are empty, Terraform uses the default VPC and the first subnet in that VPC.

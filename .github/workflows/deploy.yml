@@ -114,6 +114,8 @@ jobs:
           envs: DOCKER_HUB_ACCESS_TOKEN,DOCKER_HUB_USERNAME,DOCKER_HUB_REPO_NAME,POSTGRES_DB,POSTGRES_USER,POSTGRES_PASSWORD,SUPABASE_URL,OTEL_EXPORTER_OTLP_ENDPOINT,OTEL_LOGS_ENDPOINT,VERSION_TAG
           script: |
             cd /home/${{ secrets.SSH_USERNAME }}/app
+            export DOCKER_BUILDKIT=1
+            export COMPOSE_DOCKER_CLI_BUILD=1
             docker compose down || true
             echo "$DOCKER_HUB_ACCESS_TOKEN" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
             docker pull "$DOCKER_HUB_USERNAME/$DOCKER_HUB_REPO_NAME:$VERSION_TAG"
