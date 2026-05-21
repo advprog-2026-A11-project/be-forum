@@ -103,7 +103,9 @@ public class MessageService {
 
   @Transactional(readOnly = true)
   public Message findByIdWithReplies(UUID id) {
-    forumMetricsService.incrementDbOperation(DB_OP_READ, "MessageRepository.findByIdWithReplies");
+    forumMetricsService.incrementDbOperation(
+        DB_OP_READ,
+        "MessageRepository.findByIdWithReplies");
     return repository.findByIdWithReplies(id).orElse(null);
   }
 
@@ -114,7 +116,9 @@ public class MessageService {
       return counts;
     }
 
-    forumMetricsService.incrementDbOperation(DB_OP_READ, "MessageRepository.countRepliesByParentIds");
+    forumMetricsService.incrementDbOperation(
+        DB_OP_READ,
+        "MessageRepository.countRepliesByParentIds");
     List<Object[]> rows = repository.countRepliesByParentIds(parentIds);
     for (Object[] row : rows) {
       UUID parentId = (UUID) row[0];
