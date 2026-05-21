@@ -37,10 +37,14 @@ public class MessageService {
   @Transactional(readOnly = true)
   public List<Message> listMessages(String readingId) {
     if (readingId == null || readingId.isBlank()) {
-      forumMetricsService.incrementDbOperation("read", "MessageRepository.findTopLevelOrderByCreatedAtDesc");
+      forumMetricsService.incrementDbOperation(
+          "read",
+          "MessageRepository.findTopLevelOrderByCreatedAtDesc");
       return repository.findTopLevelOrderByCreatedAtDesc();
     }
-    forumMetricsService.incrementDbOperation("read", "MessageRepository.findTopLevelByReadingIdOrderByCreatedAtDesc");
+    forumMetricsService.incrementDbOperation(
+        "read",
+        "MessageRepository.findTopLevelByReadingIdOrderByCreatedAtDesc");
     return repository.findTopLevelByReadingIdOrderByCreatedAtDesc(readingId.trim());
   }
 
@@ -86,7 +90,9 @@ public class MessageService {
 
   @Transactional(readOnly = true)
   public List<Message> getReplies(UUID parentId) {
-    forumMetricsService.incrementDbOperation("read", "MessageRepository.findByParentIdOrderByCreatedAtAsc");
+    forumMetricsService.incrementDbOperation(
+        "read",
+        "MessageRepository.findByParentIdOrderByCreatedAtAsc");
     return repository.findByParentIdOrderByCreatedAtAsc(parentId);
   }
 
