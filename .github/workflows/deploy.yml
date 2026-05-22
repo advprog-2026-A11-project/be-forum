@@ -88,6 +88,17 @@ jobs:
           tags: |
             ${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPO_NAME }}:latest
             ${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPO_NAME }}:${{ steps.image-tag.outputs.version_tag }}
+      - name: Prepare server directory permissions
+        uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+            APP_DIR="/home/${{ secrets.SSH_USERNAME }}/app"
+            mkdir -p "$APP_DIR/alloy"
+            sudo chown -R "${{ secrets.SSH_USERNAME }}:${{ secrets.SSH_USERNAME }}" "$APP_DIR"
       - name: Copy docker-compose.yml and Dockerfile to server
         uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345
         with:
@@ -96,6 +107,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           source: "docker-compose.yml,alloy"
           target: "/home/${{ secrets.SSH_USERNAME }}/app"
+          overwrite: true
       - name: Releasing New Version
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
