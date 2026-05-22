@@ -6,6 +6,8 @@ build/
 !**/src/test/**/build/
 gradle/verification-keyring.*
 .env
+
+venv/
 ### STS ###
 .apt_generated
 .classpath
@@ -37,3 +39,10 @@ out/
 ### VS Code ###
 .vscode/
 .env.profiling.host
+
+__pycache__/
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan

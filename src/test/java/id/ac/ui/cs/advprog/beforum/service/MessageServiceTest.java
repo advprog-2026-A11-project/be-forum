@@ -30,6 +30,9 @@ class MessageServiceTest {
   @Mock
   private MessageRepository repository;
 
+  @Mock
+  private ForumMetricsService forumMetricsService;
+
   @InjectMocks
   private MessageService service;
 
