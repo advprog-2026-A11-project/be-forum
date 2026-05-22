@@ -79,6 +79,7 @@ dependencyManagement {
 
         dependency("org.postgresql:postgresql:42.7.11")
         dependency("org.apache.commons:commons-compress:1.26.0")
+        dependency("org.apache.commons:commons-lang3:3.18.0")
         dependency("org.assertj:assertj-core:3.27.7")
     }
 }
