@@ -20,13 +20,12 @@ on:
         required: true
         type: string
 
-permissions:
-  contents: read
-
 jobs:
   validate-inputs:
     name: Validate Rollback Inputs
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       version: ${{ steps.validate.outputs.version }}
       proceed: ${{ steps.validate.outputs.proceed }}
@@ -54,6 +53,8 @@ jobs:
     name: Verify Docker Image Exists
     needs: validate-inputs
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     if: needs.validate-inputs.outputs.proceed == 'true'
     
     steps:
@@ -87,6 +88,8 @@ jobs:
     name: Execute Rollback
     needs: [validate-inputs, check-image-exists]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     if: needs.validate-inputs.outputs.proceed == 'true'
     
     steps:
@@ -164,6 +167,8 @@ jobs:
     name: Post-Rollback Health Check
     needs: [validate-inputs, rollback]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     if: needs.validate-inputs.outputs.proceed == 'true'
     
     steps:
@@ -208,6 +213,8 @@ jobs:
     name: Notify Rollback Status
     needs: [validate-inputs, rollback, health-check]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     if: always() && needs.validate-inputs.outputs.proceed == 'true'
     
     steps:
