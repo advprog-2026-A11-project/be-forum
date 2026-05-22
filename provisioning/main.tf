@@ -81,6 +81,42 @@ resource "aws_instance" "vm" {
   key_name      = var.key_pair_name != "" ? var.key_pair_name : null
 
   vpc_security_group_ids = [local.effective_security_group_id]
+  user_data = <<-EOT
+    #!/bin/bash
+    set -euxo pipefail
+
+    if command -v apt-get >/dev/null 2>&1; then
+      export DEBIAN_FRONTEND=noninteractive
+      apt-get update
+      apt-get install -y ca-certificates curl git
+    elif command -v dnf >/dev/null 2>&1; then
+      dnf makecache
+      dnf install -y ca-certificates curl git
+    elif command -v yum >/dev/null 2>&1; then
+      yum makecache
+      yum install -y ca-certificates curl git
+    else
+      echo "No supported package manager found." >&2
+      exit 1
+    fi
+
+    curl -fsSL https://get.docker.com | sh
+
+    systemctl enable --now docker
+    if id -u ubuntu >/dev/null 2>&1; then
+      usermod -aG docker ubuntu
+    fi
+
+    if ! docker compose version >/dev/null 2>&1; then
+      if command -v apt-get >/dev/null 2>&1; then
+        apt-get install -y docker-compose-plugin || apt-get install -y docker-compose-v2
+      elif command -v dnf >/dev/null 2>&1; then
+        dnf install -y docker-compose-plugin
+      elif command -v yum >/dev/null 2>&1; then
+        yum install -y docker-compose-plugin
+      fi
+    fi
+  EOT
 
   root_block_device {
     volume_type           = "gp3"
