@@ -51,6 +51,7 @@ jobs:
             SUPABASE_URL=${{ secrets.SUPABASE_URL }}
             OTEL_EXPORTER_OTLP_ENDPOINT=${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
             OTEL_LOGS_ENDPOINT=${{ secrets.OTEL_LOGS_ENDPOINT }}
+            LOKI_PUSH_URL=${{ secrets.LOKI_PUSH_URL }}
             DOCKER_HUB_USERNAME=${{ secrets.DOCKER_HUB_USERNAME }}
             DOCKER_HUB_REPO_NAME=${{secrets.DOCKER_HUB_STAGING_REPO_NAME}}
 
