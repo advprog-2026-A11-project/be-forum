@@ -23,14 +23,26 @@ jobs:
         with:
           push: true
           tags: ${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_STAGING_REPO_NAME }}:latest
+      - name: Prepare server directory permissions
+        uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
+        with:
+          host: ${{ secrets.SSH_STAGING_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+            APP_DIR="/home/${{ secrets.SSH_USERNAME }}/app"
+            mkdir -p "$APP_DIR/alloy"
+            sudo chown -R "${{ secrets.SSH_USERNAME }}:${{ secrets.SSH_USERNAME }}" "$APP_DIR"
       - name: Copy docker-compose.yml and Dockerfile to server
         uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345
         with:
           host: ${{ secrets.SSH_STAGING_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_KEY }}
-          source: "docker-compose.yml"
+          source: "docker-compose.yml,alloy"
           target: "/home/${{ secrets.SSH_USERNAME }}/app"
+          overwrite: true
       - name: Releasing New Version
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
@@ -51,6 +63,7 @@ jobs:
             SUPABASE_URL=${{ secrets.SUPABASE_URL }}
             OTEL_EXPORTER_OTLP_ENDPOINT=${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
             OTEL_LOGS_ENDPOINT=${{ secrets.OTEL_LOGS_ENDPOINT }}
+            LOKI_PUSH_URL=${{ secrets.LOKI_PUSH_URL }}
             DOCKER_HUB_USERNAME=${{ secrets.DOCKER_HUB_USERNAME }}
             DOCKER_HUB_REPO_NAME=${{secrets.DOCKER_HUB_STAGING_REPO_NAME}}
 

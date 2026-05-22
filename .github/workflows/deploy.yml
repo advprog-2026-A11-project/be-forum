@@ -6,65 +6,54 @@ on:
     types:
       - completed
     branches: [main]
-  
 
 jobs:
   check-workflow-status:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     outputs:
       all_success: ${{ steps.check-status.outputs.all_success }}
     steps:
-      - name: Check status of linter.yml
-        id: check-lint
-        run: |
-          set -e
-          API_URL="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/linter.yml/runs?branch=main&event=push&status=completed&per_page=1"
-          CONCLUSION=$(curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "$API_URL" | jq -r '.workflow_runs[0].conclusion // "none"')
-          echo "Latest linter conclusion: $CONCLUSION"
-          if [ "$CONCLUSION" = "success" ]; then
-            echo "result=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "result=false" >> "$GITHUB_OUTPUT"
-          fi
+      - name: Check required workflows on triggering commit
+        id: check-required
         env:
-          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
 
-      - name: Check status of scorecard.yml
-        id: check-scorecard
-        run: |
-          set -e
-          API_URL="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/scorecard.yml/runs?branch=main&event=push&status=completed&per_page=1"
-          CONCLUSION=$(curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "$API_URL" | jq -r '.workflow_runs[0].conclusion // "none"')
-          echo "Latest scorecard conclusion: $CONCLUSION"
-          if [ "$CONCLUSION" = "success" ]; then
-            echo "result=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "result=false" >> "$GITHUB_OUTPUT"
+          if [ -z "${HEAD_SHA:-}" ]; then
+            echo "Missing workflow_run head_sha"
+            echo "all_success=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
 
-      - name: Check status of sonarcloud.yml
-        id: check-sonar
-        run: |
-          set -e
-          API_URL="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/sonarcloud.yml/runs?branch=main&event=push&status=completed&per_page=1"
-          CONCLUSION=$(curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "$API_URL" | jq -r '.workflow_runs[0].conclusion // "none"')
-          echo "Latest sonarcloud conclusion: $CONCLUSION"
-          if [ "$CONCLUSION" = "success" ]; then
-            echo "result=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "result=false" >> "$GITHUB_OUTPUT"
-          fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+          REQUIRED_WORKFLOWS=("linter.yml" "scorecard.yml" "sonarcloud.yml")
+          ALL_SUCCESS=true
+
+          for WORKFLOW_FILE in "${REQUIRED_WORKFLOWS[@]}"; do
+            API_URL="https://api.github.com/repos/${REPOSITORY}/actions/workflows/${WORKFLOW_FILE}/runs?head_sha=${HEAD_SHA}&status=completed&per_page=1"
+            RESPONSE="$(curl -fsSL -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "$API_URL")"
+            CONCLUSION="$(echo "$RESPONSE" | jq -r '.workflow_runs[0].conclusion // "none"')"
+            EVENT="$(echo "$RESPONSE" | jq -r '.workflow_runs[0].event // "none"')"
+            RUN_ID="$(echo "$RESPONSE" | jq -r '.workflow_runs[0].id // "none"')"
+
+            echo "${WORKFLOW_FILE}: conclusion=${CONCLUSION}, event=${EVENT}, run_id=${RUN_ID}"
+
+            if [ "$CONCLUSION" != "success" ]; then
+              ALL_SUCCESS=false
+            fi
+          done
+
+          echo "all_success=${ALL_SUCCESS}" >> "$GITHUB_OUTPUT"
 
       - name: Verify all workflows succeeded
         id: check-status
         run: |
-          if [[ "${{ steps.check-lint.outputs.result }}" == "true" && \
-               "${{ steps.check-scorecard.outputs.result }}" == "true" && \
-               "${{ steps.check-sonar.outputs.result }}" == "true" ]]; then
+          if [[ "${{ steps.check-required.outputs.all_success }}" == "true" ]]; then
             echo "all_success=true" >> $GITHUB_OUTPUT
           else
             echo "all_success=false" >> $GITHUB_OUTPUT
@@ -74,6 +63,8 @@ jobs:
     needs: check-workflow-status
     if: ${{ needs.check-workflow-status.outputs.all_success == 'true' && github.event.workflow_run.head_branch == 'main' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -97,21 +88,33 @@ jobs:
           tags: |
             ${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPO_NAME }}:latest
             ${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPO_NAME }}:${{ steps.image-tag.outputs.version_tag }}
+      - name: Prepare server directory permissions
+        uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+            APP_DIR="/home/${{ secrets.SSH_USERNAME }}/app"
+            mkdir -p "$APP_DIR/alloy"
+            sudo chown -R "${{ secrets.SSH_USERNAME }}:${{ secrets.SSH_USERNAME }}" "$APP_DIR"
       - name: Copy docker-compose.yml and Dockerfile to server
         uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_KEY }}
-          source: "docker-compose.yml"
+          source: "docker-compose.yml,alloy"
           target: "/home/${{ secrets.SSH_USERNAME }}/app"
+          overwrite: true
       - name: Releasing New Version
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_KEY }}
-          envs: DOCKER_HUB_ACCESS_TOKEN,DOCKER_HUB_USERNAME,DOCKER_HUB_REPO_NAME,POSTGRES_DB,POSTGRES_USER,POSTGRES_PASSWORD,SUPABASE_URL,OTEL_EXPORTER_OTLP_ENDPOINT,OTEL_LOGS_ENDPOINT,VERSION_TAG
+          envs: DOCKER_HUB_ACCESS_TOKEN,DOCKER_HUB_USERNAME,DOCKER_HUB_REPO_NAME,POSTGRES_DB,POSTGRES_USER,POSTGRES_PASSWORD,SUPABASE_URL,OTEL_EXPORTER_OTLP_ENDPOINT,OTEL_LOGS_ENDPOINT,LOKI_PUSH_URL,VERSION_TAG
           script: |
             cd /home/${{ secrets.SSH_USERNAME }}/app
             export DOCKER_BUILDKIT=1
@@ -126,6 +129,7 @@ jobs:
             SUPABASE_URL=$SUPABASE_URL
             OTEL_EXPORTER_OTLP_ENDPOINT=$OTEL_EXPORTER_OTLP_ENDPOINT
             OTEL_LOGS_ENDPOINT=$OTEL_LOGS_ENDPOINT
+            LOKI_PUSH_URL=$LOKI_PUSH_URL
             DOCKER_HUB_USERNAME=$DOCKER_HUB_USERNAME
             DOCKER_HUB_REPO_NAME=$DOCKER_HUB_REPO_NAME
             IMAGE_TAG=$VERSION_TAG
@@ -143,4 +147,5 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
           OTEL_LOGS_ENDPOINT: ${{ secrets.OTEL_LOGS_ENDPOINT }}
+          LOKI_PUSH_URL: ${{ secrets.LOKI_PUSH_URL }}
           VERSION_TAG: ${{ steps.image-tag.outputs.version_tag }}

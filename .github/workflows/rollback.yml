@@ -20,13 +20,12 @@ on:
         required: true
         type: string
 
-permissions:
-  contents: read
-
 jobs:
   validate-inputs:
     name: Validate Rollback Inputs
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       version: ${{ steps.validate.outputs.version }}
       proceed: ${{ steps.validate.outputs.proceed }}
@@ -54,6 +53,8 @@ jobs:
     name: Verify Docker Image Exists
     needs: validate-inputs
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     if: needs.validate-inputs.outputs.proceed == 'true'
     
     steps:
@@ -81,19 +82,21 @@ jobs:
         env:
           VERSION: ${{ needs.validate-inputs.outputs.version }}
           DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
-          DOCKER_HUB_REPO_NAME: ${{ secrets.DOCKER_HUB_REPO_NAME }}
+          DOCKER_HUB_REPO_NAME: ${{ github.event.inputs.environment == 'staging' && secrets.DOCKER_HUB_STAGING_REPO_NAME || secrets.DOCKER_HUB_REPO_NAME }}
 
   rollback:
     name: Execute Rollback
     needs: [validate-inputs, check-image-exists]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     if: needs.validate-inputs.outputs.proceed == 'true'
     
     steps:
       - name: Create backup of current deployment
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
-          host: ${{ secrets.SSH_HOST }}
+          host: ${{ github.event.inputs.environment == 'staging' && secrets.SSH_STAGING_HOST || secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           script: |
@@ -113,10 +116,10 @@ jobs:
       - name: Execute rollback deployment
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
-          host: ${{ secrets.SSH_HOST }}
+          host: ${{ github.event.inputs.environment == 'staging' && secrets.SSH_STAGING_HOST || secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_KEY }}
-          envs: VERSION,DOCKER_HUB_USERNAME,DOCKER_HUB_REPO_NAME,DOCKER_HUB_ACCESS_TOKEN,POSTGRES_DB,POSTGRES_USER,POSTGRES_PASSWORD,SUPABASE_URL,OTEL_EXPORTER_OTLP_ENDPOINT,OTEL_LOGS_ENDPOINT
+          envs: VERSION,DOCKER_HUB_USERNAME,DOCKER_HUB_REPO_NAME,DOCKER_HUB_ACCESS_TOKEN,POSTGRES_DB,POSTGRES_USER,POSTGRES_PASSWORD,SUPABASE_URL,OTEL_EXPORTER_OTLP_ENDPOINT,OTEL_LOGS_ENDPOINT,LOKI_PUSH_URL
           script: |
             set -e
             cd /home/${{ secrets.SSH_USERNAME }}/app
@@ -130,28 +133,42 @@ jobs:
             
             echo "📥 Pulling image: $IMAGE"
             docker pull $IMAGE
-            
-            echo "🛑 Stopping current containers..."
-            docker compose down || true
+
+            # Preserve existing DB credentials when available to avoid DB auth drift
+            # with persistent postgres volume.
+            EXISTING_POSTGRES_DB=""
+            EXISTING_POSTGRES_USER=""
+            EXISTING_POSTGRES_PASSWORD=""
+            if [ -f .env ]; then
+              EXISTING_POSTGRES_DB="$(grep '^POSTGRES_DB=' .env | cut -d'=' -f2- || true)"
+              EXISTING_POSTGRES_USER="$(grep '^POSTGRES_USER=' .env | cut -d'=' -f2- || true)"
+              EXISTING_POSTGRES_PASSWORD="$(grep '^POSTGRES_PASSWORD=' .env | cut -d'=' -f2- || true)"
+            fi
+            POSTGRES_DB_VALUE="${EXISTING_POSTGRES_DB:-$POSTGRES_DB}"
+            POSTGRES_USER_VALUE="${EXISTING_POSTGRES_USER:-$POSTGRES_USER}"
+            POSTGRES_PASSWORD_VALUE="${EXISTING_POSTGRES_PASSWORD:-$POSTGRES_PASSWORD}"
 
             cat > .env << EOL
-            POSTGRES_DB=$POSTGRES_DB
-            POSTGRES_USER=$POSTGRES_USER
-            POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+            POSTGRES_DB=$POSTGRES_DB_VALUE
+            POSTGRES_USER=$POSTGRES_USER_VALUE
+            POSTGRES_PASSWORD=$POSTGRES_PASSWORD_VALUE
             SUPABASE_URL=$SUPABASE_URL
             OTEL_EXPORTER_OTLP_ENDPOINT=$OTEL_EXPORTER_OTLP_ENDPOINT
             OTEL_LOGS_ENDPOINT=$OTEL_LOGS_ENDPOINT
+            LOKI_PUSH_URL=$LOKI_PUSH_URL
             DOCKER_HUB_USERNAME=$DOCKER_HUB_USERNAME
             DOCKER_HUB_REPO_NAME=$DOCKER_HUB_REPO_NAME
             IMAGE_TAG=$VERSION
             CURRENT_VERSION=$VERSION
             EOL
-            docker compose up -d
+
+            echo "🔄 Recreating app and alloy only (keeping db/redis running)"
+            docker compose up -d --no-deps --force-recreate app alloy
             docker ps
         env:
           VERSION: ${{ needs.validate-inputs.outputs.version }}
           DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
-          DOCKER_HUB_REPO_NAME: ${{ secrets.DOCKER_HUB_REPO_NAME }}
+          DOCKER_HUB_REPO_NAME: ${{ github.event.inputs.environment == 'staging' && secrets.DOCKER_HUB_STAGING_REPO_NAME || secrets.DOCKER_HUB_REPO_NAME }}
           DOCKER_HUB_ACCESS_TOKEN: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
           POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
           POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
@@ -159,18 +176,21 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
           OTEL_LOGS_ENDPOINT: ${{ secrets.OTEL_LOGS_ENDPOINT }}
+          LOKI_PUSH_URL: ${{ secrets.LOKI_PUSH_URL }}
 
   health-check:
     name: Post-Rollback Health Check
     needs: [validate-inputs, rollback]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     if: needs.validate-inputs.outputs.proceed == 'true'
     
     steps:
       - name: Verify service health
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
-          host: ${{ secrets.SSH_HOST }}
+          host: ${{ github.event.inputs.environment == 'staging' && secrets.SSH_STAGING_HOST || secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           script: |
@@ -208,6 +228,8 @@ jobs:
     name: Notify Rollback Status
     needs: [validate-inputs, rollback, health-check]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     if: always() && needs.validate-inputs.outputs.proceed == 'true'
     
     steps:

@@ -14,6 +14,8 @@ import id.ac.ui.cs.advprog.beforum.service.MessageQueryCacheService;
 import id.ac.ui.cs.advprog.beforum.service.MessageService;
 import java.util.List;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -31,6 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/messages")
 public class MessageController {
+  private static final Logger log = LoggerFactory.getLogger(MessageController.class);
 
   private final MessageService service;
   private final MessageQueryCacheService queryCacheService;
@@ -80,6 +83,8 @@ public class MessageController {
     Message created = service.createMessage(req.content(), req.readingId(), userId);
     cacheInvalidationService.evictForNewMessage(created);
     forumMetricsService.incrementCreated();
+    log.info("Message created id={} readingId={} userId={}",
+        created.getId(), created.getReadingId(), userId);
     return ResponseEntity.ok(responseMapper.toResponse(created));
   }
 
@@ -125,6 +130,8 @@ public class MessageController {
     }
     cacheInvalidationService.evictForMessageMutation(updated);
     forumMetricsService.incrementUpdated();
+    log.info("Message updated id={} readingId={} userId={}",
+        updated.getId(), updated.getReadingId(), userId);
     return ResponseEntity.ok(responseMapper.toResponse(updated));
   }
 
@@ -147,6 +154,8 @@ public class MessageController {
     service.deleteMessage(id);
     cacheInvalidationService.evictForMessageMutation(message);
     forumMetricsService.incrementDeleted();
+    log.info("Message deleted id={} readingId={} userId={}",
+        message.getId(), message.getReadingId(), userId);
     return ResponseEntity.noContent().build();
   }
 }
